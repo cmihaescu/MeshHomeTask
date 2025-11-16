@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 
 const Shop = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState({});
   const [message, setMessage] = useState({ type: '', text: '' });
-  const { user, accessToken } = useAuth();
-  const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   useEffect(() => {
     fetchProducts();
@@ -41,38 +39,24 @@ const Shop = () => {
     }
   };
 
-  const handlePurchase = async (productId) => {
-    if (!user) {
-      navigate('/auth');
+  const handleAddToCart = (product) => {
+    const quantity = quantities[product.id] || 1;
+
+    if (quantity > product.stock) {
+      setMessage({ type: 'error', text: 'Quantity exceeds available stock' });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
       return;
     }
 
-    try {
-      const response = await fetch('/api/purchase', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          productId,
-          quantity: quantities[productId],
-        }),
-      });
+    addToCart(product, quantity);
+    setMessage({ type: 'success', text: `Added ${quantity} ${product.name} to cart!` });
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Purchase failed');
-      }
-
-      const data = await response.json();
-      setMessage({ type: 'success', text: 'Purchase successful!' });
-      fetchProducts(); // Refresh to update stock
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-    } catch (error) {
-      setMessage({ type: 'error', text: error.message });
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-    }
+    // Reset quantity to 1
+    setQuantities({
+      ...quantities,
+      [product.id]: 1,
+    });
   };
 
   if (loading) {
@@ -114,11 +98,11 @@ const Shop = () => {
                   disabled={product.stock === 0}
                 />
                 <button
-                  onClick={() => handlePurchase(product.id)}
+                  onClick={() => handleAddToCart(product)}
                   className="btn btn-primary"
                   disabled={product.stock === 0}
                 >
-                  {product.stock === 0 ? 'Out of Stock' : 'Buy Now'}
+                  {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                 </button>
               </div>
             </div>

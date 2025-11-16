@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { getCartItemsCount } = useCart();
+  const cartCount = getCartItemsCount();
 
   return (
     <nav className="nav">
@@ -11,19 +12,31 @@ const Navbar = () => {
         <h1>Demo Shop</h1>
       </Link>
       <div className="nav-links">
-        {user ? (
-          <>
-            <Link to="/">Shop</Link>
-            <Link to="/transactions">My Orders</Link>
-            <Link to="/profile">Profile</Link>
-            <Link to="/mesh">Mesh</Link>
-            <button onClick={logout} className="btn btn-secondary">
-              Logout
-            </button>
-          </>
-        ) : (
-          <Link to="/auth">Login / Register</Link>
-        )}
+        <Link to="/">Shop</Link>
+        <Link to="/cart" style={{ position: 'relative' }}>
+          Cart
+          {cartCount > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '-8px',
+                right: '-10px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                borderRadius: '50%',
+                width: '20px',
+                height: '20px',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+              }}
+            >
+              {cartCount}
+            </span>
+          )}
+        </Link>
       </div>
     </nav>
   );
