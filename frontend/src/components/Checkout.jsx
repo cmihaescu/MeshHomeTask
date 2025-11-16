@@ -81,17 +81,13 @@ const Checkout = () => {
       const order = await response.json();
       console.log('Order created:', order);
 
-      // Clear cart and show success
+      // Clear cart and redirect to confirmation page
       setOrderComplete(true);
       setIsLoading(false);
       clearCart();
 
-      alert('Order completed successfully! Order ID: ' + order.orderId);
-
-      // Redirect to shop after 3 seconds
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
+      // Redirect to confirmation page immediately
+      navigate(`/confirmation?orderId=${order.orderId}`);
     } catch (error) {
       console.error('Error completing order:', error);
       setError('Failed to complete order. Please try again.');
