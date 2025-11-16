@@ -1,26 +1,22 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
 import Navbar from './components/Navbar';
 import Shop from './components/Shop';
-import Auth from './components/Auth';
-import Transactions from './components/Transactions';
-import Profile from './components/Profile';
-import MeshWidget from './components/MeshWidget';
+import Cart from './components/Cart';
+import Checkout from './components/Checkout';
 
 function App() {
   return (
     <Router>
-      <AuthProvider>
+      <CartProvider>
         <Navbar />
         <Routes>
           <Route path="/" element={<Shop />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/mesh" element={<MeshWidget />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
         </Routes>
-      </AuthProvider>
+      </CartProvider>
     </Router>
   );
 }
