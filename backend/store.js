@@ -4,6 +4,7 @@ class Store {
     this.users = new Map();
     this.tokens = new Map(); // Maps refresh tokens to user IDs
     this.transactions = [];
+    this.walletAddresses = new Map(); // Maps user IDs to their wallet addresses
     this.products = [
       {
         id: 1,
@@ -158,6 +159,27 @@ class Store {
       return true;
     }
     return false;
+  }
+
+  // Wallet address methods
+  getWalletAddresses(userId) {
+    return this.walletAddresses.get(userId) || [];
+  }
+
+  setWalletAddresses(userId, addresses) {
+    this.walletAddresses.set(userId, addresses);
+  }
+
+  addWalletAddress(userId, address) {
+    const addresses = this.getWalletAddresses(userId);
+    addresses.push(address);
+    this.walletAddresses.set(userId, addresses);
+  }
+
+  removeWalletAddress(userId, addressId) {
+    const addresses = this.getWalletAddresses(userId);
+    const filtered = addresses.filter(addr => addr.id !== addressId);
+    this.walletAddresses.set(userId, filtered);
   }
 }
 
