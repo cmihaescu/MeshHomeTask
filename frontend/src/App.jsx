@@ -6,6 +6,7 @@ import Shop from './components/Shop';
 import Cart from './components/Cart';
 import Checkout from './components/Checkout';
 import Account from './components/Account';
+import Confirmation from './components/Confirmation';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/confirmation" element={<Confirmation />} />
         </Routes>
       </CartProvider>
     </Router>

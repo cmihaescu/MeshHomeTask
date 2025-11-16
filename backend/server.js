@@ -217,6 +217,47 @@ app.post('/api/mesh/payment-link', async (req, res) => {
   }
 });
 
+// Mesh Connect: Get Portfolio by User ID
+app.get('/api/mesh/portfolio/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!process.env.MESH_CLIENT_ID || !process.env.MESH_CLIENT_SECRET) {
+      return res.status(500).json({
+        error: 'Mesh Connect not configured. Please set MESH_CLIENT_ID and MESH_CLIENT_SECRET environment variables.'
+      });
+    }
+
+    // Call Mesh API for portfolio
+    const response = await fetch(`${process.env.MESH_API_URL}/api/v1/holdings/portfolio?UserId=${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': process.env.MESH_CLIENT_ID,
+        'X-Client-Secret': process.env.MESH_CLIENT_SECRET
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Mesh API error:', data);
+      return res.status(response.status).json({
+        error: 'Failed to fetch portfolio',
+        details: data.message || data.error
+      });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching portfolio:', error);
+    res.status(500).json({
+      error: 'Failed to fetch portfolio',
+      details: error.message
+    });
+  }
+});
+
 // Mesh Connect: Get Account Holdings
 app.get('/api/mesh/holdings/:accountId', async (req, res) => {
   try {
