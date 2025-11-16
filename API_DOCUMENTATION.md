@@ -27,7 +27,7 @@ Returns a list of all available products.
     "id": 1,
     "name": "Classic Running Shoes",
     "category": "shoes",
-    "price": 89.99,
+    "price": 50.00,
     "description": "Comfortable running shoes...",
     "image": "https://...",
     "stock": 25
