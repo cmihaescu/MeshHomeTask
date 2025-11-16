@@ -16,6 +16,7 @@ const Navbar = () => {
             <Link to="/">Shop</Link>
             <Link to="/transactions">My Orders</Link>
             <Link to="/profile">Profile</Link>
+            <Link to="/mesh">Mesh</Link>
             <button onClick={logout} className="btn btn-secondary">
               Logout
             </button>

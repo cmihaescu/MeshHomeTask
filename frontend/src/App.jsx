@@ -6,6 +6,7 @@ import Shop from './components/Shop';
 import Auth from './components/Auth';
 import Transactions from './components/Transactions';
 import Profile from './components/Profile';
+import MeshWidget from './components/MeshWidget';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/auth" element={<Auth />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/mesh" element={<MeshWidget />} />
         </Routes>
       </AuthProvider>
     </Router>
