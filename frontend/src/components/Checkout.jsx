@@ -10,8 +10,17 @@ const Checkout = () => {
   const [linkToken, setLinkToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('mesh'); // 'mesh' or 'manual'
+  const [paymentMethod, setPaymentMethod] = useState('crypto'); // 'crypto' or 'manual-link'
   const [orderComplete, setOrderComplete] = useState(false);
+  const [userId, setUserId] = useState(() => {
+    // Generate or retrieve a user ID
+    let id = localStorage.getItem('userId');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('userId', id);
+    }
+    return id;
+  });
 
   useEffect(() => {
     // Redirect if cart is empty
@@ -90,7 +99,57 @@ const Checkout = () => {
     }
   };
 
-  const handleMeshPayment = async () => {
+  const handleCryptoPayment = async () => {
+    if (!meshLink) {
+      setError('Mesh Link SDK not initialized');
+      return;
+    }
+
+    try {
+      setError(null);
+      setIsLoading(true);
+
+      // Fetch saved wallet addresses
+      const addressesResponse = await fetch(`/api/wallet-addresses/${userId}`);
+      let walletAddresses = [];
+      if (addressesResponse.ok) {
+        walletAddresses = await addressesResponse.json();
+      }
+
+      // Create payment link token
+      const response = await fetch('/api/mesh/payment-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          amount: getCartTotal(),
+          toAddresses: walletAddresses.length > 0 ? walletAddresses : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Failed to create payment link');
+      }
+
+      const data = await response.json();
+
+      if (!data.linkToken) {
+        throw new Error('No link token received from server');
+      }
+
+      // Open Mesh widget with the link token
+      meshLink.openLink(data.linkToken);
+    } catch (err) {
+      console.error('Error initiating crypto payment:', err);
+      setError(err.message || 'Failed to initiate payment');
+      setIsLoading(false);
+    }
+  };
+
+  const handleManualLinkPayment = async () => {
     if (!linkToken.trim()) {
       setError('Please enter a link token');
       return;
@@ -108,50 +167,6 @@ const Checkout = () => {
     } catch (err) {
       console.error('Error opening link:', err);
       setError(err.message || 'Failed to open Mesh widget');
-      setIsLoading(false);
-    }
-  };
-
-  const handleManualOrder = async () => {
-    // For testing purposes - create order without payment
-    try {
-      setIsLoading(true);
-      const orderData = {
-        items: cartItems,
-        total: getCartTotal(),
-        paymentMethod: 'manual',
-        timestamp: new Date().toISOString(),
-      };
-
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create order');
-      }
-
-      const order = await response.json();
-      console.log('Order created:', order);
-
-      // Clear cart and show success
-      setOrderComplete(true);
-      setIsLoading(false);
-      clearCart();
-
-      alert('Order placed successfully! Order ID: ' + order.orderId);
-
-      // Redirect to shop after 3 seconds
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
-    } catch (error) {
-      console.error('Error completing order:', error);
-      setError('Failed to complete order. Please try again.');
       setIsLoading(false);
     }
   };
@@ -223,8 +238,8 @@ const Checkout = () => {
             <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}>
               <input
                 type="radio"
-                value="mesh"
-                checked={paymentMethod === 'mesh'}
+                value="crypto"
+                checked={paymentMethod === 'crypto'}
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 style={{ marginRight: '10px' }}
               />
@@ -233,21 +248,55 @@ const Checkout = () => {
             <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
               <input
                 type="radio"
-                value="manual"
-                checked={paymentMethod === 'manual'}
+                value="manual-link"
+                checked={paymentMethod === 'manual-link'}
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 style={{ marginRight: '10px' }}
               />
-              <span style={{ fontWeight: 'bold' }}>Manual Order (Testing)</span>
+              <span style={{ fontWeight: 'bold' }}>Pay with Manual Link Token</span>
             </label>
           </div>
 
-          {paymentMethod === 'mesh' && (
+          {paymentMethod === 'crypto' && (
             <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', backgroundColor: '#f8f9fa' }}>
-              <h4 style={{ marginTop: 0 }}>Mesh Connect Payment</h4>
+              <h4 style={{ marginTop: 0 }}>Crypto Payment via Mesh Connect</h4>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                Click the button below to generate a payment link and connect your crypto wallet.
+                {userId && (
+                  <>
+                    <br />
+                    <span style={{ fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                      You can manage your wallet addresses in the{' '}
+                      <a href="/account" style={{ color: '#007bff', textDecoration: 'underline' }}>
+                        Account page
+                      </a>.
+                    </span>
+                  </>
+                )}
+              </p>
+              <button
+                onClick={handleCryptoPayment}
+                disabled={isLoading}
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+              >
+                {isLoading ? 'Generating Payment Link...' : 'Generate Payment Link & Pay'}
+              </button>
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+                You'll be redirected to Mesh Connect to complete your payment securely.
+              </p>
+            </div>
+          )}
+
+          {paymentMethod === 'manual-link' && (
+            <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', backgroundColor: '#f8f9fa' }}>
+              <h4 style={{ marginTop: 0 }}>Pay with Link Token</h4>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                Paste a link token generated from Postman or another source.
+              </p>
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                  Link Token (from Postman):
+                  Link Token:
                 </label>
                 <input
                   type="text"
@@ -265,32 +314,12 @@ const Checkout = () => {
                 />
               </div>
               <button
-                onClick={handleMeshPayment}
+                onClick={handleManualLinkPayment}
                 disabled={isLoading || !linkToken.trim()}
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-              >
-                {isLoading ? 'Processing...' : 'Connect Wallet & Pay'}
-              </button>
-              <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-                You'll be redirected to Mesh Connect to complete your payment securely.
-              </p>
-            </div>
-          )}
-
-          {paymentMethod === 'manual' && (
-            <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', backgroundColor: '#f8f9fa' }}>
-              <h4 style={{ marginTop: 0 }}>Manual Order (Testing Only)</h4>
-              <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
-                This will create an order without payment processing. Use this for testing purposes only.
-              </p>
-              <button
-                onClick={handleManualOrder}
-                disabled={isLoading}
                 className="btn btn-secondary"
                 style={{ width: '100%' }}
               >
-                {isLoading ? 'Processing...' : 'Place Order'}
+                {isLoading ? 'Processing...' : 'Connect Wallet & Pay'}
               </button>
             </div>
           )}

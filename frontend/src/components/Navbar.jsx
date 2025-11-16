@@ -13,6 +13,7 @@ const Navbar = () => {
       </Link>
       <div className="nav-links">
         <Link to="/">Shop</Link>
+        <Link to="/account">Account</Link>
         <Link to="/cart" style={{ position: 'relative' }}>
           Cart
           {cartCount > 0 && (

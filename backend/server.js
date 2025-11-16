@@ -141,6 +141,82 @@ app.post('/api/mesh/link-token', async (req, res) => {
   }
 });
 
+// Mesh Connect: Generate Payment Link Token
+app.post('/api/mesh/payment-link', async (req, res) => {
+  try {
+    const { userId, amount, toAddresses } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Valid amount is required' });
+    }
+
+    if (!process.env.MESH_CLIENT_ID || !process.env.MESH_CLIENT_SECRET) {
+      return res.status(500).json({
+        error: 'Mesh Connect not configured. Please set MESH_CLIENT_ID and MESH_CLIENT_SECRET environment variables.'
+      });
+    }
+
+    // Prepare toAddresses - if provided use those, otherwise use default
+    const addresses = toAddresses && toAddresses.length > 0
+      ? toAddresses.map(addr => ({
+          networkId: addr.networkId,
+          symbol: addr.symbol,
+          address: addr.address,
+          amount: amount // Set the checkout total as the amount
+        }))
+      : [{
+          networkId: "e3c7fdd8-b1fc-4e51-85ae-bb276e075611",
+          symbol: "USDC",
+          address: "0x910aeb59ba75c8226a84e3c1b0db3b55a4ec2a40",
+          amount: amount
+        }];
+
+    const requestBody = {
+      userId: userId || uuidv4(),
+      restrictMultipleAccounts: true,
+      integrationId: process.env.MESH_INTEGRATION_ID,
+      transferOptions: {
+        transferType: "payment",
+        toAddresses: addresses,
+        isInclusiveFeeEnabled: false
+      }
+    };
+
+    // Call Mesh API directly
+    const response = await fetch(`${process.env.MESH_API_URL}/api/v1/linktoken`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': process.env.MESH_CLIENT_ID,
+        'X-Client-Secret': process.env.MESH_CLIENT_SECRET
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Mesh API error:', data);
+      return res.status(response.status).json({
+        error: 'Failed to create payment link',
+        details: data.message || data.error
+      });
+    }
+
+    res.json({
+      linkToken: data.content?.linkToken,
+      status: data.status,
+      message: data.message
+    });
+  } catch (error) {
+    console.error('Error creating payment link:', error);
+    res.status(500).json({
+      error: 'Failed to create payment link',
+      details: error.message
+    });
+  }
+});
+
 // Mesh Connect: Get Account Holdings
 app.get('/api/mesh/holdings/:accountId', async (req, res) => {
   try {
@@ -213,6 +289,63 @@ app.get('/api/mesh/transfer/:transferId', async (req, res) => {
       error: 'Failed to fetch transfer status',
       details: error.message
     });
+  }
+});
+
+// Wallet Address Management Endpoints
+
+// Get wallet addresses for a user
+app.get('/api/wallet-addresses/:userId', (req, res) => {
+  try {
+    const { userId } = req.params;
+    const addresses = store.getWalletAddresses(userId);
+    res.json(addresses);
+  } catch (error) {
+    console.error('Error fetching wallet addresses:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Add wallet address
+app.post('/api/wallet-addresses', (req, res) => {
+  try {
+    const { userId, networkId, symbol, address } = req.body;
+
+    if (!userId || !networkId || !symbol || !address) {
+      return res.status(400).json({
+        error: 'userId, networkId, symbol, and address are required'
+      });
+    }
+
+    const walletAddress = {
+      id: uuidv4(),
+      networkId,
+      symbol,
+      address,
+      createdAt: new Date().toISOString()
+    };
+
+    store.addWalletAddress(userId, walletAddress);
+
+    res.status(201).json({
+      message: 'Wallet address added successfully',
+      address: walletAddress
+    });
+  } catch (error) {
+    console.error('Error adding wallet address:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete wallet address
+app.delete('/api/wallet-addresses/:userId/:addressId', (req, res) => {
+  try {
+    const { userId, addressId } = req.params;
+    store.removeWalletAddress(userId, addressId);
+    res.json({ message: 'Wallet address deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting wallet address:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
