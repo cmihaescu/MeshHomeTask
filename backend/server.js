@@ -3,6 +3,7 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const store = require('./store');
 const MeshClient = require('./meshClient');
+require('dotenv').config()
 
 const app = express();
 const PORT = process.env.PORT || 5000;

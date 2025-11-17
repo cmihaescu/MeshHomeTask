@@ -26,8 +26,7 @@ const Account = () => {
 
   // Common network options for convenience
   const networkOptions = [
-    { id: 'e3c7fdd8-b1fc-4e51-85ae-bb276e075611', name: 'Polygon (USDC)', symbol: 'USDC' },
-    { id: '71c900a7-000f-434d-8b84-527c62a747a0', name: 'Ethereum (USDC)', symbol: 'USDC' },
+    { id: 'e3c7fdd8-b1fc-4e51-85ae-bb276e075611', name: 'Ethereum (USDC)', symbol: 'USDC' },
     { id: 'custom', name: 'Custom Network', symbol: '' },
   ];
 

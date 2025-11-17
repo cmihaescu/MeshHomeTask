@@ -29,12 +29,12 @@ const Checkout = () => {
       return;
     }
 
+    console.log("import.meta.env.VITE_MESH_CLIENT_ID", import.meta.env.VITE_MESH_CLIENT_ID)
     // Initialize Mesh Link SDK
     const link = createLink({
       clientId: import.meta.env.VITE_MESH_CLIENT_ID,
       onIntegrationConnected: (payload) => {
         console.log("Connected!", payload);
-        // TODO: Send payload to backend to verify and create order
         handleOrderCompletion(payload);
       },
       onExit: (error) => {
