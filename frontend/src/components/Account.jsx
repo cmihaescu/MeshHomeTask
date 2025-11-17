@@ -12,6 +12,7 @@ const Account = () => {
     return id;
   });
   const [walletAddresses, setWalletAddresses] = useState([]);
+  const [meshTokens, setMeshTokens] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -33,6 +34,7 @@ const Account = () => {
 
   useEffect(() => {
     fetchWalletAddresses();
+    fetchMeshTokens();
   }, [userId]);
 
   const fetchWalletAddresses = async () => {
@@ -52,6 +54,23 @@ const Account = () => {
       setError(err.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchMeshTokens = async () => {
+    try {
+      const response = await fetch(`/api/mesh/tokens/${userId}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        setMeshTokens(data);
+      } else {
+        // No tokens found, which is okay
+        setMeshTokens(null);
+      }
+    } catch (err) {
+      console.error('Error fetching Mesh tokens:', err);
+      // Don't set error, as having no tokens is not an error condition
     }
   };
 
@@ -185,6 +204,72 @@ const Account = () => {
           <strong>Success:</strong> {success}
         </div>
       )}
+
+      {/* Mesh Tokens Section */}
+      <div style={{ marginBottom: '30px' }}>
+        <h3 style={{ marginBottom: '15px' }}>Mesh Connect Tokens</h3>
+        {meshTokens ? (
+          <div style={{
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            padding: '20px',
+            backgroundColor: '#fff',
+          }}>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>
+                Access Token
+              </div>
+              <div style={{
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                padding: '10px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '4px',
+                wordBreak: 'break-all',
+                border: '1px solid #e9ecef',
+              }}>
+                {meshTokens.accessToken}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>
+                Refresh Token
+              </div>
+              <div style={{
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                padding: '10px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '4px',
+                wordBreak: 'break-all',
+                border: '1px solid #e9ecef',
+              }}>
+                {meshTokens.refreshToken}
+              </div>
+            </div>
+
+            {meshTokens.updatedAt && (
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                <strong>Last Updated:</strong> {new Date(meshTokens.updatedAt).toLocaleString()}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            padding: '20px',
+            textAlign: 'center',
+            backgroundColor: '#f8f9fa',
+            color: '#666',
+          }}>
+            <p style={{ margin: 0, fontSize: '14px' }}>
+              No Mesh Connect tokens found. Complete a payment to connect your wallet and generate tokens.
+            </p>
+          </div>
+        )}
+      </div>
 
       <div style={{ marginBottom: '30px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
