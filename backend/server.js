@@ -333,6 +333,47 @@ app.get('/api/mesh/transfer/:transferId', async (req, res) => {
   }
 });
 
+// Mesh Token Management Endpoints
+
+// Store Mesh tokens for a user
+app.post('/api/mesh/store-tokens', (req, res) => {
+  try {
+    const { userId, accessToken, refreshToken } = req.body;
+
+    if (!userId || !accessToken || !refreshToken) {
+      return res.status(400).json({
+        error: 'userId, accessToken, and refreshToken are required'
+      });
+    }
+
+    store.setMeshTokens(userId, accessToken, refreshToken);
+
+    res.status(200).json({
+      message: 'Mesh tokens stored successfully'
+    });
+  } catch (error) {
+    console.error('Error storing Mesh tokens:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get Mesh tokens for a user
+app.get('/api/mesh/tokens/:userId', (req, res) => {
+  try {
+    const { userId } = req.params;
+    const tokens = store.getMeshTokens(userId);
+
+    if (!tokens) {
+      return res.status(404).json({ error: 'No tokens found for this user' });
+    }
+
+    res.json(tokens);
+  } catch (error) {
+    console.error('Error fetching Mesh tokens:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Wallet Address Management Endpoints
 
 // Get wallet addresses for a user

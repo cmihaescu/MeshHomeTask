@@ -5,6 +5,7 @@ class Store {
     this.tokens = new Map(); // Maps refresh tokens to user IDs
     this.transactions = [];
     this.walletAddresses = new Map(); // Maps user IDs to their wallet addresses
+    this.meshTokens = new Map(); // Maps user IDs to their Mesh access/refresh tokens
     this.products = [
       {
         id: 1,
@@ -180,6 +181,19 @@ class Store {
     const addresses = this.getWalletAddresses(userId);
     const filtered = addresses.filter(addr => addr.id !== addressId);
     this.walletAddresses.set(userId, filtered);
+  }
+
+  // Mesh token methods
+  getMeshTokens(userId) {
+    return this.meshTokens.get(userId) || null;
+  }
+
+  setMeshTokens(userId, accessToken, refreshToken) {
+    this.meshTokens.set(userId, {
+      accessToken,
+      refreshToken,
+      updatedAt: new Date().toISOString()
+    });
   }
 }
 

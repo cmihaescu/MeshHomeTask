@@ -34,7 +34,12 @@ const Checkout = () => {
       clientId: import.meta.env.VITE_MESH_CLIENT_ID,
       onIntegrationConnected: (payload) => {
         console.log("Connected!", payload);
-        // TODO: Send payload to backend to verify and create order
+
+        // Store Mesh tokens if present
+        if (payload.accessToken && payload.refreshToken) {
+          storeMeshTokens(payload.accessToken, payload.refreshToken);
+        }
+
         handleOrderCompletion(payload);
       },
       onExit: (error) => {
@@ -54,6 +59,31 @@ const Checkout = () => {
 
     setMeshLink(link);
   }, [cartItems, navigate, orderComplete]);
+
+  const storeMeshTokens = async (accessToken, refreshToken) => {
+    try {
+      // Store in localStorage
+      localStorage.setItem('meshAccessToken', accessToken);
+      localStorage.setItem('meshRefreshToken', refreshToken);
+
+      // Send to backend to store with userId
+      await fetch('/api/mesh/store-tokens', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          accessToken,
+          refreshToken,
+        }),
+      });
+
+      console.log('Mesh tokens stored successfully');
+    } catch (error) {
+      console.error('Error storing Mesh tokens:', error);
+    }
+  };
 
   const handleOrderCompletion = async (meshPayload) => {
     try {
