@@ -58,11 +58,12 @@ const Confirmation = () => {
     }).format(value);
   };
 
-  const calculateTotalValue = () => {
-    if (!portfolio || !portfolio.content || !portfolio.content.holdings) return 0;
-    return portfolio.content.holdings.reduce((sum, holding) => {
-      return sum + (holding.fiatConversion?.value || 0);
-    }, 0);
+  const formatPercentage = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value) + '%';
   };
 
   return (
@@ -132,7 +133,7 @@ const Confirmation = () => {
                 Please wait while we fetch your holdings
               </div>
             </div>
-          ) : portfolio && portfolio.content && portfolio.content.holdings && portfolio.content.holdings.length > 0 ? (
+          ) : portfolio && portfolio.content && portfolio.content.cryptocurrencyPositions && portfolio.content.cryptocurrencyPositions.length > 0 ? (
             <>
               {/* Portfolio Summary */}
               <div style={{
@@ -141,22 +142,45 @@ const Confirmation = () => {
                 borderRadius: '8px',
                 border: '2px solid #28a745',
                 marginBottom: '30px',
-                textAlign: 'center',
               }}>
-                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-                  Total Portfolio Value
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', textAlign: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                      Total Portfolio Value
+                    </div>
+                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#28a745' }}>
+                      {formatCurrency(portfolio.content.cryptocurrenciesValue)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                      Portfolio Cost Basis
+                    </div>
+                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#333' }}>
+                      {formatCurrency(portfolio.content.portfolioCostBasis)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                      Portfolio Performance
+                    </div>
+                    <div style={{
+                      fontSize: '32px',
+                      fontWeight: 'bold',
+                      color: portfolio.content.actualPortfolioPerformance >= 0 ? '#28a745' : '#dc3545'
+                    }}>
+                      {formatPercentage(portfolio.content.actualPortfolioPerformance)}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#28a745' }}>
-                  {formatCurrency(calculateTotalValue())}
-                </div>
-                <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
-                  Across {portfolio.content.holdings.length} asset{portfolio.content.holdings.length !== 1 ? 's' : ''}
+                <div style={{ fontSize: '12px', color: '#999', marginTop: '20px', textAlign: 'center' }}>
+                  Across {portfolio.content.cryptocurrencyPositions.length} position{portfolio.content.cryptocurrencyPositions.length !== 1 ? 's' : ''}
                 </div>
               </div>
 
-              {/* Holdings Grid */}
+              {/* Cryptocurrency Positions Grid */}
               <div style={{ display: 'grid', gap: '20px' }}>
-                {portfolio.content.holdings.map((holding, index) => (
+                {portfolio.content.cryptocurrencyPositions.map((position, index) => (
                   <div
                     key={index}
                     style={{
@@ -178,18 +202,21 @@ const Confirmation = () => {
                               color: '#333',
                               marginRight: '10px',
                             }}>
-                              {holding.symbol}
+                              {position.symbol}
                             </span>
-                            {holding.icon && (
-                              <img
-                                src={holding.icon}
-                                alt={holding.symbol}
-                                style={{ width: '24px', height: '24px' }}
-                              />
-                            )}
+                            <span style={{
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              color: '#fff',
+                              backgroundColor: '#007bff',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                            }}>
+                              {formatPercentage(position.portfolioPercentage)}
+                            </span>
                           </div>
                           <div style={{ fontSize: '14px', color: '#666' }}>
-                            {holding.name || holding.symbol}
+                            {position.name}
                           </div>
                         </div>
 
@@ -198,74 +225,57 @@ const Confirmation = () => {
                             Amount
                           </div>
                           <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#333' }}>
-                            {formatNumber(holding.amount, 8)} {holding.symbol}
+                            {formatNumber(position.amount, 8)} {position.symbol}
                           </div>
                         </div>
 
-                        {holding.fiatConversion && (
-                          <div>
-                            <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
-                              USD Value
-                            </div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#28a745' }}>
-                              {formatCurrency(holding.fiatConversion.value)}
-                            </div>
-                            {holding.fiatConversion.price && (
-                              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                                @ {formatCurrency(holding.fiatConversion.price)} per {holding.symbol}
-                              </div>
-                            )}
+                        <div>
+                          <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+                            Market Value
                           </div>
-                        )}
+                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#28a745' }}>
+                            {formatCurrency(position.marketValue)}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Right Column */}
                       <div>
-                        {holding.network && (
+                        <div style={{ marginBottom: '15px' }}>
+                          <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+                            Cost Basis
+                          </div>
+                          <div style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>
+                            {formatCurrency(position.costBasis)}
+                          </div>
+                        </div>
+
+                        {position.totalReturn !== undefined && (
                           <div style={{ marginBottom: '15px' }}>
                             <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
-                              Network
+                              Total Return
                             </div>
                             <div style={{
-                              fontSize: '14px',
-                              fontWeight: '500',
-                              color: '#333',
-                              padding: '6px 12px',
-                              backgroundColor: '#f8f9fa',
-                              borderRadius: '4px',
-                              display: 'inline-block',
+                              fontSize: '18px',
+                              fontWeight: '600',
+                              color: position.totalReturn >= 0 ? '#28a745' : '#dc3545'
                             }}>
-                              {holding.network.name || holding.network.id}
+                              {formatCurrency(position.totalReturn)}
                             </div>
                           </div>
                         )}
 
-                        {holding.type && (
-                          <div style={{ marginBottom: '15px' }}>
-                            <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
-                              Type
-                            </div>
-                            <div style={{ fontSize: '14px', color: '#666' }}>
-                              {holding.type}
-                            </div>
-                          </div>
-                        )}
-
-                        {holding.address && (
+                        {position.returnPercentage !== undefined && (
                           <div>
                             <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
-                              Address
+                              Return Percentage
                             </div>
                             <div style={{
-                              fontSize: '12px',
-                              fontFamily: 'monospace',
-                              color: '#666',
-                              backgroundColor: '#f8f9fa',
-                              padding: '8px',
-                              borderRadius: '4px',
-                              wordBreak: 'break-all',
+                              fontSize: '18px',
+                              fontWeight: '600',
+                              color: position.returnPercentage >= 0 ? '#28a745' : '#dc3545'
                             }}>
-                              {holding.address}
+                              {formatPercentage(position.returnPercentage)}
                             </div>
                           </div>
                         )}
