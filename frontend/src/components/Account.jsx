@@ -7,12 +7,13 @@ const Account = () => {
     let id = localStorage.getItem('userId');
     if (!id) {
       id = crypto.randomUUID();
+      console.log("user Id set from account page")
       localStorage.setItem('userId', id);
     }
     return id;
   });
-  const [walletAddresses, setWalletAddresses] = useState([]);
   const [meshTokens, setMeshTokens] = useState(null);
+  const [walletAddresses, setWalletAddresses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);

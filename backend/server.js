@@ -118,29 +118,29 @@ app.get('/api/orders', (req, res) => {
 });
 
 // Mesh Connect: Generate Link Token
-app.post('/api/mesh/link-token', async (req, res) => {
-  try {
-    const { userId } = req.body;
+// app.post('/api/mesh/link-token', async (req, res) => {
+//   try {
+//     const { userId } = req.body;
 
-    if (!meshClient.clientId || !meshClient.clientSecret) {
-      return res.status(500).json({
-        error: 'Mesh Connect not configured. Please set MESH_CLIENT_ID and MESH_CLIENT_SECRET environment variables.'
-      });
-    }
+//     if (!meshClient.clientId || !meshClient.clientSecret) {
+//       return res.status(500).json({
+//         error: 'Mesh Connect not configured. Please set MESH_CLIENT_ID and MESH_CLIENT_SECRET environment variables.'
+//       });
+//     }
 
-    const linkToken = await meshClient.createLinkToken({
-      userId: userId || `anonymous_${uuidv4()}`,
-    });
+//     const linkToken = await meshClient.createLinkToken({
+//       userId: userId || `anonymous_${uuidv4()}`,
+//     });
 
-    res.json(linkToken);
-  } catch (error) {
-    console.error('Error creating link token:', error);
-    res.status(500).json({
-      error: 'Failed to create link token',
-      details: error.message
-    });
-  }
-});
+//     res.json(linkToken);
+//   } catch (error) {
+//     console.error('Error creating link token:', error);
+//     res.status(500).json({
+//       error: 'Failed to create link token',
+//       details: error.message
+//     });
+//   }
+// });
 
 // Mesh Connect: Generate Payment Link Token
 app.post('/api/mesh/payment-link', async (req, res) => {

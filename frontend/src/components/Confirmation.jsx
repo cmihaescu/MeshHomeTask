@@ -28,9 +28,9 @@ const Confirmation = () => {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || 'Failed to fetch portfolio');
       }
-
       const data = await response.json();
       setPortfolio(data);
+      console.log("returned portfolio data", data)
       setError(null);
     } catch (err) {
       console.error('Error fetching portfolio:', err);

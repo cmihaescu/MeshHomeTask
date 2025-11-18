@@ -17,6 +17,7 @@ const Checkout = () => {
     let id = localStorage.getItem('userId');
     if (!id) {
       id = crypto.randomUUID();
+      console.log("user Id set from checkout page")
       localStorage.setItem('userId', id);
     }
     return id;
@@ -29,7 +30,6 @@ const Checkout = () => {
       return;
     }
 
-    console.log("import.meta.env.VITE_MESH_CLIENT_ID", import.meta.env.VITE_MESH_CLIENT_ID)
     // Initialize Mesh Link SDK
     const link = createLink({
       clientId: import.meta.env.VITE_MESH_CLIENT_ID,
@@ -37,11 +37,11 @@ const Checkout = () => {
         console.log("Connected!", payload);
 
         // Store Mesh tokens if present
-        if (payload.accessToken && payload.refreshToken) {
-          storeMeshTokens(payload.accessToken, payload.refreshToken);
+        if (payload.accessToken.accountTokens[0].accessToken && payload.accessToken.accountTokens[0].refreshToken) {
+          storeMeshTokens(payload.accessToken.accountTokens[0].accessToken, payload.accessToken.accountTokens[0].refreshToken);
         }
 
-        handleOrderCompletion(payload);
+        // handleOrderCompletion(payload);
       },
       onExit: (error) => {
         if (error) {
