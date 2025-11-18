@@ -10,6 +10,7 @@ const Checkout = () => {
   const [linkToken, setLinkToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [abortMessage, setAbortMessage] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('crypto'); // 'crypto' or 'manual-link'
   const [orderComplete, setOrderComplete] = useState(false);
   const [userId, setUserId] = useState(() => {
@@ -49,6 +50,7 @@ const Checkout = () => {
           setError(error.message || 'Payment connection failed');
         } else {
           console.log("User closed the widget");
+          setAbortMessage(true);
         }
         setIsLoading(false);
       },
@@ -347,6 +349,36 @@ const Checkout = () => {
                 style={{ width: '100%' }}
               >
                 {isLoading ? 'Processing...' : 'Connect Wallet & Pay'}
+              </button>
+            </div>
+          )}
+
+          {abortMessage && (
+            <div style={{
+              marginTop: '20px',
+              padding: '15px',
+              backgroundColor: '#ff6b6b',
+              color: 'white',
+              borderRadius: '4px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <span>You aborted mission, the transfer was not performed, please try again.</span>
+              <button
+                onClick={() => setAbortMessage(false)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  padding: '0 8px',
+                  marginLeft: '15px',
+                }}
+              >
+                ×
               </button>
             </div>
           )}
