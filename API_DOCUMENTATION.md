@@ -159,7 +159,7 @@ Generates a link token for initializing the Mesh Connect SDK.
 
 **Usage:**
 ```javascript
-const response = await fetch('/api/mesh/link-token', {
+const response = await fetch('/api/mesh/payment-link', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ userId: 'user123' })
@@ -348,7 +348,7 @@ Navigate to `/checkout`
 ### 3. Generate link token (optional - for dynamic token generation)
 
 ```javascript
-const response = await fetch('/api/mesh/link-token', {
+const response = await fetch('/api/mesh/payment-link', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ userId: 'user123' })

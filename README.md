@@ -133,7 +133,7 @@ The frontend will run on `http://localhost:3000`
 - `GET /api/orders` - Get all orders
 
 ### Mesh Connect
-- `POST /api/mesh/link-token` - Generate link token for Mesh SDK
+- `POST /api/mesh/payment-link` - Generate link token for Mesh SDK
 - `GET /api/mesh/holdings/:accountId` - Get account holdings
 - `GET /api/mesh/transactions/:accountId` - Get account transactions
 - `GET /api/mesh/auth/:accountId` - Get auth token
