@@ -194,7 +194,7 @@ app.post('/api/mesh/payment-link', async (req, res) => {
 });
 
 // Mesh Connect: Get Portfolio by User ID
-app.get('/api/mesh/portfolio/:userId', async (req, res) => {
+app.get('/api/v1/holdings/portfolio/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -215,7 +215,7 @@ app.get('/api/mesh/portfolio/:userId', async (req, res) => {
     });
 
     const data = await response.json();
-
+    console.log(JSON.stringify(data, null, 2));
     if (!response.ok) {
       console.error('Mesh API error:', data);
       return res.status(response.status).json({

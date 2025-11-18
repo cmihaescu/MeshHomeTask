@@ -22,7 +22,7 @@ const Confirmation = () => {
   const fetchPortfolio = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/mesh/portfolio/${userId}`);
+      const response = await fetch(`/api/v1/holdings/portfolio/${userId}`);
 
       if (!response.ok) {
         const errorData = await response.json();
