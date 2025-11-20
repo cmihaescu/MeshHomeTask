@@ -1,13 +1,17 @@
 # Demo Shop - Shoes & Clothing
 
-A full-stack e-commerce demo application built with React and Node.js, featuring shopping cart, checkout, and Mesh Connect cryptocurrency payment integration.
+A full-stack e-commerce demo application built with React and Node.js, featuring shopping cart, checkout, Mesh Connect cryptocurrency payment integration, user authentication, wallet management, and real-time portfolio tracking.
 
 ## Features
 
 - Browse 10 products (shoes and clothing)
 - Shopping cart with quantity management
+- User authentication and profile management
 - Checkout with Mesh Connect crypto payment integration
-- Order management and tracking
+- Wallet address management (add/remove multiple wallets)
+- Real-time cryptocurrency portfolio tracking with performance metrics
+- Order confirmation with portfolio display
+- Transaction history viewing
 - In-memory data storage
 - Full Mesh Connect API client integration
 
@@ -22,9 +26,10 @@ A full-stack e-commerce demo application built with React and Node.js, featuring
 ### Frontend
 - React 18
 - React Router for navigation
-- Context API for cart state management
+- Context API for cart and authentication state management
 - Mesh Connect Web Link SDK (@meshconnect/web-link-sdk)
 - Vite for fast development
+- LocalStorage for cart and auth persistence
 
 ## Project Structure
 
@@ -33,7 +38,7 @@ MeshHomeTask/
 ├── backend/
 │   ├── package.json
 │   ├── server.js          # Express server with all API routes
-│   ├── store.js           # In-memory data store
+│   ├── store.js           # In-memory data store (users, tokens, wallets, orders)
 │   ├── meshClient.js      # Mesh Connect API client
 │   ├── .env.example       # Environment variables template
 │   └── .gitignore
@@ -41,6 +46,8 @@ MeshHomeTask/
 │   ├── package.json
 │   ├── vite.config.js
 │   ├── index.html
+│   ├── public/
+│   │   └── favicon.ico    # Application favicon
 │   ├── .env.example       # Frontend environment variables
 │   ├── .gitignore
 │   └── src/
@@ -48,12 +55,18 @@ MeshHomeTask/
 │       ├── App.jsx
 │       ├── index.css
 │       ├── contexts/
-│       │   └── CartContext.jsx    # Shopping cart state
+│       │   ├── CartContext.jsx    # Shopping cart state management
+│       │   └── AuthContext.jsx    # Authentication state management
 │       └── components/
-│           ├── Navbar.jsx         # Navigation with cart badge
-│           ├── Shop.jsx           # Product listing
-│           ├── Cart.jsx           # Shopping cart
+│           ├── Navbar.jsx         # Navigation with cart badge and auth
+│           ├── Shop.jsx           # Product listing page
+│           ├── Cart.jsx           # Shopping cart page
 │           ├── Checkout.jsx       # Checkout with Mesh integration
+│           ├── Confirmation.jsx   # Order confirmation with portfolio display
+│           ├── Account.jsx        # Account/wallet management page
+│           ├── Profile.jsx        # User profile component
+│           ├── Auth.jsx           # Login/signup component
+│           ├── Transactions.jsx   # Transaction history component
 │           └── MeshWidget.jsx     # Mesh Connect widget
 ├── README.md
 ├── API_DOCUMENTATION.md   # Complete API reference
@@ -124,6 +137,9 @@ The frontend will run on `http://localhost:3000`
 
 ## API Endpoints
 
+### Health
+- `GET /api/health` - Health check endpoint
+
 ### Products
 - `GET /api/products` - Get all products
 - `GET /api/products/:id` - Get single product
@@ -132,8 +148,18 @@ The frontend will run on `http://localhost:3000`
 - `POST /api/orders` - Create a new order
 - `GET /api/orders` - Get all orders
 
+### Portfolio
+- `GET /api/v1/holdings/portfolio/:userId` - Get user's cryptocurrency portfolio with performance metrics
+
+### Wallet Management
+- `GET /api/wallet-addresses/:userId` - Get user's wallet addresses
+- `POST /api/wallet-addresses` - Add a new wallet address
+- `DELETE /api/wallet-addresses/:userId/:addressId` - Delete a wallet address
+
 ### Mesh Connect
 - `POST /api/mesh/payment-link` - Generate link token for Mesh SDK
+- `POST /api/mesh/store-tokens` - Store Mesh access/refresh tokens
+- `GET /api/mesh/tokens/:userId` - Get user's Mesh tokens
 - `GET /api/mesh/holdings/:accountId` - Get account holdings
 - `GET /api/mesh/transactions/:accountId` - Get account transactions
 - `GET /api/mesh/auth/:accountId` - Get auth token
@@ -144,22 +170,48 @@ See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for complete API reference.
 
 ## Usage
 
-1. **Browse Products**: View the 10 available products on the shop page
-2. **Add to Cart**: Select quantity and click "Add to Cart"
-3. **View Cart**: Click the cart icon in the navbar (shows item count badge)
-4. **Checkout**: Proceed to checkout from the cart page
-5. **Payment**:
+1. **Authentication** (Optional):
+   - Click "Login" in the navbar to create an account or sign in
+   - Authenticated users can manage wallets and view portfolio
+
+2. **Browse Products**: View the 10 available products on the shop page
+
+3. **Add to Cart**: Select quantity and click "Add to Cart"
+
+4. **View Cart**: Click the cart icon in the navbar (shows item count badge)
+
+5. **Checkout**: Proceed to checkout from the cart page
+
+6. **Payment**:
    - Option 1: Pay with Mesh Connect (cryptocurrency)
    - Option 2: Manual order (for testing without payment)
-6. **Mesh Payment Flow**:
+
+7. **Mesh Payment Flow**:
    - Paste link token from Postman (or use backend API to generate)
    - Click "Connect Wallet & Pay"
    - Complete payment in Mesh Connect modal
    - Order is automatically created upon successful payment
+   - Redirected to confirmation page with portfolio display
+
+8. **Wallet Management** (Authenticated users):
+   - Navigate to "Account" page from navbar
+   - Add wallet addresses manually
+   - View connected wallets
+   - Remove wallets as needed
+
+9. **Portfolio Tracking**:
+   - View real-time portfolio on confirmation page after purchase
+   - See total portfolio value, cost basis, and performance percentage
+   - View individual cryptocurrency positions with:
+     - Amount held
+     - Market value
+     - Cost basis
+     - Portfolio percentage
+     - Total return and return percentage
 
 ## Products Available
 
-1. Classic Running Shoes - $89.99
+1. Classic Running Shoes - $50.00
 2. Leather Sneakers - $129.99
 3. Athletic Training Shoes - $109.99
 4. Cotton T-Shirt - $24.99
@@ -172,7 +224,7 @@ See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for complete API reference.
 
 ## Mesh Connect Integration
 
-This application integrates with [Mesh Connect](https://meshconnect.com/) for cryptocurrency payment processing.
+This application integrates with [Mesh Connect](https://meshconnect.com/) for cryptocurrency payment processing and portfolio management.
 
 ### Features
 
@@ -180,6 +232,9 @@ This application integrates with [Mesh Connect](https://meshconnect.com/) for cr
 - Wallet/exchange connection modal
 - Transfer execution and status tracking
 - Account holdings and transaction retrieval
+- Real-time portfolio aggregation with performance metrics
+- Mesh token storage and management
+- Multi-wallet support
 - Comprehensive API client for all Mesh endpoints
 
 ### Setup
@@ -201,19 +256,33 @@ You can test the application without Mesh credentials:
 - Migrate to SQLite/PostgreSQL for persistent storage
 - Add product categories and filtering
 - Add product search functionality
-- Implement admin panel for product management
-- Add user authentication for order tracking
-- Implement email notifications for orders
-- Add inventory management
+- Implement admin panel for product and order management
+- Enhance user authentication with password hashing (bcrypt) and JWT
+- Implement email notifications for orders and transactions
+- Add inventory management and stock tracking
+- Add transaction history page for all user purchases
+- Implement portfolio charts and historical performance tracking
+- Add multi-currency support
+- Implement real-time price updates via WebSocket
+- Add push notifications for price alerts
 - Deploy to production (Vercel/Railway/etc.)
 
 ## Development Notes
 
 - The application uses in-memory storage, so all data is lost when the server restarts
-- For production, consider implementing a proper database
+- In-memory stores include: users, auth tokens, wallet addresses, Mesh tokens, orders, and transactions
+- For production, consider implementing a proper database (PostgreSQL, MongoDB, etc.)
 - CORS is enabled for all origins in development - restrict in production
 - Mesh Connect requires domain whitelisting - see MESH_CSP_FIX.md
-- Cart data persists in localStorage (survives page refresh)
+- Cart data and authentication persists in localStorage (survives page refresh)
+- User authentication is simple (no password hashing) - implement proper auth for production
+- Portfolio data structure includes:
+  - `portfolioCostBasis`: Total initial investment
+  - `actualPortfolioPerformance`: Overall portfolio performance percentage
+  - `cryptocurrenciesValue`: Total value of all crypto holdings
+  - `cryptocurrencyPositions`: Array of individual positions with metrics
+    - `symbol`, `name`, `amount`, `marketValue`, `costBasis`, `portfolioPercentage`
+    - `totalReturn`, `returnPercentage`, `lastPrice`
 
 ## License
 
