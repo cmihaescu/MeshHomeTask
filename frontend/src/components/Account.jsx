@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Portfolio from './Portfolio';
 
 const Account = () => {
   const navigate = useNavigate();
@@ -164,7 +165,7 @@ const Account = () => {
   return (
     <div className="container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2>Wallet Address Management</h2>
+        <h2>Account details</h2>
         <button onClick={() => navigate('/')} className="btn btn-secondary">
           Back to Shop
         </button>
@@ -204,7 +205,9 @@ const Account = () => {
           <strong>Success:</strong> {success}
         </div>
       )}
-
+      {/* Portfolio Section */}
+      <h3 style={{ marginBottom: '15px' }}>Portfolio details</h3>
+      <Portfolio userId={userId}/>
       {/* Mesh Tokens Section */}
       <div style={{ marginBottom: '30px' }}>
         <h3 style={{ marginBottom: '15px' }}>Mesh Connect Tokens</h3>

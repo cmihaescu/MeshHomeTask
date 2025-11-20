@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createLink } from "@meshconnect/web-link-sdk";
 import { useCart } from '../contexts/CartContext';
+import MeshSDK from './MeshSDK';
+import MeshSDKPostmanLink from './MeshSDKPostmanLink.jsx';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { cartItems, getCartTotal, clearCart } = useCart();
-  const [meshLink, setMeshLink] = useState(null);
-  const [linkToken, setLinkToken] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [abortMessage, setAbortMessage] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('crypto'); // 'crypto' or 'manual-link'
   const [orderComplete, setOrderComplete] = useState(false);
   const [userId, setUserId] = useState(() => {
@@ -24,69 +20,6 @@ const Checkout = () => {
     return id;
   });
 
-  useEffect(() => {
-    // Redirect if cart is empty
-    if (cartItems.length === 0 && !orderComplete) {
-      navigate('/cart');
-      return;
-    }
-
-    // Initialize Mesh Link SDK
-    const link = createLink({
-      clientId: import.meta.env.VITE_MESH_CLIENT_ID,
-      onIntegrationConnected: (payload) => {
-        console.log("Connected!", payload);
-
-        // Store Mesh tokens if present
-        if (payload.accessToken.accountTokens[0].accessToken && payload.accessToken.accountTokens[0].refreshToken) {
-          storeMeshTokens(payload.accessToken.accountTokens[0].accessToken, payload.accessToken.accountTokens[0].refreshToken);
-        }
-
-        // handleOrderCompletion(payload);
-      },
-      onExit: (error) => {
-        if (error) {
-          console.error("User closed or error:", error);
-          setError(error.message || 'Payment connection failed');
-        } else {
-          console.log("User closed the widget");
-          setAbortMessage(true);
-        }
-        setIsLoading(false);
-      },
-      onTransferFinished: (payload) => {
-        console.log("Transfer result:", payload);
-        handleOrderCompletion(payload);
-      }
-    });
-
-    setMeshLink(link);
-  }, [cartItems, navigate, orderComplete]);
-
-  const storeMeshTokens = async (accessToken, refreshToken) => {
-    try {
-      // Store in localStorage
-      localStorage.setItem('meshAccessToken', accessToken);
-      localStorage.setItem('meshRefreshToken', refreshToken);
-
-      // Send to backend to store with userId
-      await fetch('/api/mesh/store-tokens', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          accessToken,
-          refreshToken,
-        }),
-      });
-
-      console.log('Mesh tokens stored successfully');
-    } catch (error) {
-      console.error('Error storing Mesh tokens:', error);
-    }
-  };
 
   const handleOrderCompletion = async (meshPayload) => {
     try {
@@ -124,78 +57,6 @@ const Checkout = () => {
     } catch (error) {
       console.error('Error completing order:', error);
       setError('Failed to complete order. Please try again.');
-      setIsLoading(false);
-    }
-  };
-
-  const handleCryptoPayment = async () => {
-    if (!meshLink) {
-      setError('Mesh Link SDK not initialized');
-      return;
-    }
-
-    try {
-      setError(null);
-      setIsLoading(true);
-
-      // Fetch saved wallet addresses
-      const addressesResponse = await fetch(`/api/wallet-addresses/${userId}`);
-      let walletAddresses = [];
-      if (addressesResponse.ok) {
-        walletAddresses = await addressesResponse.json();
-      }
-
-      // Create payment link token
-      const response = await fetch('/api/mesh/payment-link', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          amount: getCartTotal(),
-          toAddresses: walletAddresses.length > 0 ? walletAddresses : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || errorData.error || 'Failed to create payment link');
-      }
-
-      const data = await response.json();
-
-      if (!data.linkToken) {
-        throw new Error('No link token received from server');
-      }
-
-      // Open Mesh widget with the link token
-      meshLink.openLink(data.linkToken);
-    } catch (err) {
-      console.error('Error initiating crypto payment:', err);
-      setError(err.message || 'Failed to initiate payment');
-      setIsLoading(false);
-    }
-  };
-
-  const handleManualLinkPayment = async () => {
-    if (!linkToken.trim()) {
-      setError('Please enter a link token');
-      return;
-    }
-
-    if (!meshLink) {
-      setError('Mesh Link SDK not initialized');
-      return;
-    }
-
-    try {
-      setError(null);
-      setIsLoading(true);
-      meshLink.openLink(linkToken.trim());
-    } catch (err) {
-      console.error('Error opening link:', err);
-      setError(err.message || 'Failed to open Mesh widget');
       setIsLoading(false);
     }
   };
@@ -286,115 +147,9 @@ const Checkout = () => {
             </label>
           </div>
 
-          {paymentMethod === 'crypto' && (
-            <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', backgroundColor: '#f8f9fa' }}>
-              <h4 style={{ marginTop: 0 }}>Crypto Payment via Mesh Connect</h4>
-              <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
-                Click the button below to generate a payment link and connect your crypto wallet.
-                {userId && (
-                  <>
-                    <br />
-                    <span style={{ fontSize: '12px', marginTop: '5px', display: 'block' }}>
-                      You can manage your wallet addresses in the{' '}
-                      <a href="/account" style={{ color: '#007bff', textDecoration: 'underline' }}>
-                        Account page
-                      </a>.
-                    </span>
-                  </>
-                )}
-              </p>
-              <button
-                onClick={handleCryptoPayment}
-                disabled={isLoading}
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-              >
-                {isLoading ? 'Generating Payment Link...' : 'Generate Payment Link & Pay'}
-              </button>
-              <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-                You'll be redirected to Mesh Connect to complete your payment securely.
-              </p>
-            </div>
-          )}
+          {paymentMethod === 'crypto' && <MeshSDK handleOrderCompletion={handleOrderCompletion} userId={userId} orderComplete={orderComplete}  transferType={"payment"}/>}
 
-          {paymentMethod === 'manual-link' && (
-            <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', backgroundColor: '#f8f9fa' }}>
-              <h4 style={{ marginTop: 0 }}>Pay with Link Token</h4>
-              <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
-                Paste a link token generated from Postman or another source.
-              </p>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                  Link Token:
-                </label>
-                <input
-                  type="text"
-                  value={linkToken}
-                  onChange={(e) => setLinkToken(e.target.value)}
-                  placeholder="Paste your link token here"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    fontSize: '14px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                  }}
-                />
-              </div>
-              <button
-                onClick={handleManualLinkPayment}
-                disabled={isLoading || !linkToken.trim()}
-                className="btn btn-secondary"
-                style={{ width: '100%' }}
-              >
-                {isLoading ? 'Processing...' : 'Connect Wallet & Pay'}
-              </button>
-            </div>
-          )}
-
-          {abortMessage && (
-            <div style={{
-              marginTop: '20px',
-              padding: '15px',
-              backgroundColor: '#ff6b6b',
-              color: 'white',
-              borderRadius: '4px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}>
-              <span>You aborted mission, the transfer was not performed, please try again.</span>
-              <button
-                onClick={() => setAbortMessage(false)}
-                style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: 'white',
-                  fontSize: '20px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  padding: '0 8px',
-                  marginLeft: '15px',
-                }}
-              >
-                ×
-              </button>
-            </div>
-          )}
-
-          {error && (
-            <div style={{
-              marginTop: '20px',
-              padding: '12px',
-              backgroundColor: '#f8d7da',
-              color: '#721c24',
-              border: '1px solid #f5c6cb',
-              borderRadius: '4px',
-            }}>
-              <strong>Error:</strong> {error}
-            </div>
-          )}
+          {paymentMethod === 'manual-link' && <MeshSDKPostmanLink handleOrderCompletion={handleOrderCompletion} orderComplete={orderComplete} />       }
         </div>
       </div>
 

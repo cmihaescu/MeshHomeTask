@@ -120,7 +120,7 @@ app.get('/api/orders', (req, res) => {
 // Mesh Connect: Generate Payment Link Token
 app.post('/api/mesh/payment-link', async (req, res) => {
   try {
-    const { userId, amount, toAddresses } = req.body;
+    const { userId, amount, toAddresses, transferType } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Valid amount is required' });
@@ -152,7 +152,7 @@ app.post('/api/mesh/payment-link', async (req, res) => {
       restrictMultipleAccounts: true,
       integrationId: process.env.MESH_INTEGRATION_ID,
       transferOptions: {
-        transferType: "payment",
+        transferType,
         toAddresses: addresses,
         isInclusiveFeeEnabled: false
       }
