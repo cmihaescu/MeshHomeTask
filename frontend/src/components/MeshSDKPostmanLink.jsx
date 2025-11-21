@@ -18,9 +18,12 @@ const MeshSDKPostmanLink = ({ handleOrderCompletion, orderComplete }) => {
             onIntegrationConnected: (payload) => {
                 console.log("Connected!", payload);
                 const { accessToken } = payload.accessToken.accountTokens[0]
-                const { refreshToken } = payload.accessToken.refreshToken[0]
+                const { refreshToken } = payload.accessToken.accountTokens[0]
                 // Store Mesh tokens if present
-                if (accessToken && refreshToken) {
+                if (accessToken 
+                    && refreshToken 
+                    && !localStorage.getItem('meshAccessToken') 
+                    && !localStorage.getItem('meshRefreshToken')) {
                     localStorage.setItem('meshAccessToken', accessToken);
                     localStorage.setItem('meshRefreshToken', refreshToken);
                 }

@@ -1,5 +1,5 @@
 import { createLink } from "@meshconnect/web-link-sdk";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,29 +12,51 @@ const MeshSDK = ({ handleOrderCompletion, userId, orderComplete, transferType })
   const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [abortMessage, setAbortMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0)
+  const transferCompletedRef = useRef(false);
 
 
   useEffect(() => {
     const link = createLink({
       clientId: import.meta.env.VITE_MESH_CLIENT_ID,
+      onEvent: (event) => {
+        console.log("event: ",event)
+        switch (event.type) {
+          case 'pageLoaded':
+            console.log("onEvent pageLoaded fired: ", event)
+            setAbortMessage(false)
+            setSuccessMessage(false)
+          break
+          case 'close':
+            console.log("onEvent close fired: ", event)
+          break
+          default:
+            // Unknown transfer type
+            break;
+        }
+      },
       onIntegrationConnected: (payload) => {
         console.log("Connected!", payload);
         const { accessToken } = payload.accessToken.accountTokens[0]
-        const { refreshToken } = payload.accessToken.refreshToken[0]
+        const { refreshToken } = payload.accessToken.accountTokens[0]
         // Store Mesh tokens if present
-        if (accessToken && refreshToken) {
+        console.log('accessToken & refreshToken ', accessToken, refreshToken)
+        if (accessToken
+          && refreshToken
+          && !localStorage.getItem('meshAccessToken')
+          && !localStorage.getItem('meshRefreshToken')) {
           localStorage.setItem('meshAccessToken', accessToken);
           localStorage.setItem('meshRefreshToken', refreshToken);
         }
-
       },
       onExit: (error) => {
+        console.log("Exit. transferCompletedRef =", transferCompletedRef.current);
         if (error) {
           console.error("User closed or error:", error);
           setError(error.message || `${transferType} connection failed`);
-        } else {
-          console.log("User closed the widget");
+        } else if (!transferCompletedRef.current) {
+          console.log("onExit closed the widget");
           setAbortMessage(true);
         }
         setIsLoading(false);
@@ -42,6 +64,9 @@ const MeshSDK = ({ handleOrderCompletion, userId, orderComplete, transferType })
       onTransferFinished: (payload) => {
         console.log("Transfer result:", payload);
         handleOrderCompletion(payload);
+        setSuccessMessage(true)
+        transferCompletedRef.current = true;
+        console.log('payload.status ', payload.status)
         navigate(`/confirmation`)
         clearCart()
       }
@@ -75,7 +100,7 @@ const MeshSDK = ({ handleOrderCompletion, userId, orderComplete, transferType })
         },
         body: JSON.stringify({
           userId,
-          amount: transferType==="payment" ? getCartTotal() : depositAmount,
+          amount: transferType === "payment" ? getCartTotal() : depositAmount,
           transferType,
           toAddresses: walletAddresses.length > 0 ? walletAddresses : undefined,
         }),
@@ -115,28 +140,28 @@ const MeshSDK = ({ handleOrderCompletion, userId, orderComplete, transferType })
                 <p>You can manage your wallet addresses in the{' '}
                   <a href="/account" style={{ color: '#007bff', textDecoration: 'underline' }}>
                     Account page
-                  </a>.</p> 
-                  :
-                  <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  </a>.</p>
+                :
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                     Deposit amount in USDC:
-                </label>
-                <input
+                  </label>
+                  <input
                     type="text"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
                     placeholder="Input deposit value here"
                     style={{
-                        width: '100%',
-                        padding: '10px',
-                        fontSize: '14px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                        fontFamily: 'monospace',
+                      width: '100%',
+                      padding: '10px',
+                      fontSize: '14px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
                     }}
-                />
-            </div>
-                  }
+                  />
+                </div>
+              }
             </span>
           </>
         )}
@@ -166,6 +191,36 @@ const MeshSDK = ({ handleOrderCompletion, userId, orderComplete, transferType })
           <span>You aborted mission, the transfer was not performed, please try again.</span>
           <button
             onClick={() => setAbortMessage(false)}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: 'white',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              padding: '0 8px',
+              marginLeft: '15px',
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {successMessage && (
+        <div style={{
+          marginTop: '20px',
+          padding: '15px',
+          backgroundColor: '#047c00ff',
+          color: 'white',
+          borderRadius: '4px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <span>{`Your ${transferType} was successfull!`}</span>
+          <button
+            onClick={() => setSuccessMessage(false)}
             style={{
               backgroundColor: 'transparent',
               border: 'none',
