@@ -7,7 +7,7 @@ require('dotenv').config()
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+const CoinIntegrationId="47624467-e52e-4938-a41a-7926b6c27acf"
 // Initialize Mesh Client
 const meshClient = new MeshClient({
   clientId: process.env.MESH_CLIENT_ID,
@@ -161,7 +161,7 @@ app.post('/api/mesh/payment-link', async (req, res) => {
     const requestBody = {
       userId: userId,
       restrictMultipleAccounts: true,
-      integrationId: process.env.MESH_INTEGRATION_ID,
+      integrationId: CoinIntegrationId,
       transferOptions: {
         transferType,
         toAddresses: addresses,
