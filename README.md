@@ -154,19 +154,19 @@ See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for complete API reference.
 
 ## Usage
 
-2. **Browse Products**: View the 10 available products on the shop page
+1. **Browse Products**: View the 10 available products on the shop page
 
-3. **Add to Cart**: Select quantity and click "Add to Cart"
+2. **Add to Cart**: Select quantity and click "Add to Cart"
 
-4. **View Cart**: Click the cart icon in the navbar (shows item count badge)
+3. **View Cart**: Click the cart icon in the navbar (shows item count badge)
 
-5. **Checkout**: Proceed to checkout from the cart page
+4. **Checkout**: Proceed to checkout from the cart page
 
-6. **Payment**:
+5. **Payment**:
    - Option 1: Pay with Mesh Connect (cryptocurrency)
    - Option 2: Manual order (for testing with payment link generated from postman)
 
-7. **Mesh Payment Flow**:
+6. **Mesh Payment Flow**:
    - Paste link token from Postman (or use backend API to generate)
    - Click "Connect Wallet & Pay"
    - Complete payment in Mesh Connect modal
@@ -174,7 +174,7 @@ See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for complete API reference.
    - Redirected to confirmation page with portfolio display
    - Option to do deposit from confirmation page
 
-9. **Portfolio Tracking**:
+7. **Portfolio Tracking**:
    - View real-time portfolio on confirmation page after purchase and on account page
    - See total portfolio value, cost basis, and performance percentage
    - View individual cryptocurrency positions with:
