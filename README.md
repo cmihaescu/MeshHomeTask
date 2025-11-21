@@ -149,13 +149,9 @@ The frontend will run on `http://localhost:3000`
 
 ### Mesh Connect
 - `POST /api/mesh/payment-link` - Generate link token for Mesh SDK
-- `POST /api/mesh/store-tokens` - Store Mesh access/refresh tokens
-- `GET /api/mesh/tokens/:userId` - Get user's Mesh tokens
+- `POST /api/v1/holdings/portfolio` - Get account portfolio
 - `GET /api/mesh/holdings/:accountId` - Get account holdings
 - `GET /api/mesh/transactions/:accountId` - Get account transactions
-- `GET /api/mesh/auth/:accountId` - Get auth token
-- `POST /api/mesh/transfer` - Execute a transfer
-- `GET /api/mesh/transfer/:transferId` - Get transfer status
 
 See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for complete API reference.
 

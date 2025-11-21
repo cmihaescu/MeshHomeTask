@@ -7,7 +7,7 @@ require('dotenv').config()
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+const CoinIntegrationId="47624467-e52e-4938-a41a-7926b6c27acf"
 // Initialize Mesh Client
 const meshClient = new MeshClient({
   clientId: process.env.MESH_CLIENT_ID,
@@ -126,6 +126,10 @@ app.post('/api/mesh/payment-link', async (req, res) => {
       return res.status(400).json({ error: 'Valid amount is required' });
     }
 
+    if(!userId) {
+      return res.status(400).json({ error: 'No userId' });
+    }
+
     if (!process.env.MESH_CLIENT_ID || !process.env.MESH_CLIENT_SECRET) {
       return res.status(500).json({
         error: 'Mesh Connect not configured. Please set MESH_CLIENT_ID and MESH_CLIENT_SECRET environment variables.'
@@ -133,31 +137,39 @@ app.post('/api/mesh/payment-link', async (req, res) => {
     }
 
     // Prepare toAddresses - if provided use those, otherwise use default
-    const addresses = toAddresses && toAddresses.length > 0
-      ? toAddresses.map(addr => ({
-          networkId: addr.networkId,
-          symbol: addr.symbol,
-          address: addr.address,
-          amount: amount // Set the checkout total as the amount
-        }))
-      : [{
+    // const addresses = toAddresses && toAddresses.length > 0
+    //   ? toAddresses.map(addr => ({
+    //       networkId: addr.networkId,
+    //       symbol: addr.symbol,
+    //       address: addr.address,
+    //       amount: amount // Set the checkout total as the amount
+    //     }))
+    //   : [{
+    //       networkId: "e3c7fdd8-b1fc-4e51-85ae-bb276e075611",
+    //       symbol: "USDC",
+    //       address: "0x910aeb59ba75c8226a84e3c1b0db3b55a4ec2a40",
+    //       amount: amount
+    //     }];
+
+    const addresses = [{
           networkId: "e3c7fdd8-b1fc-4e51-85ae-bb276e075611",
           symbol: "USDC",
           address: "0x910aeb59ba75c8226a84e3c1b0db3b55a4ec2a40",
-          amount: amount
+          ...(transferType === "payment" && { amount })
         }];
 
     const requestBody = {
-      userId: userId || uuidv4(),
+      userId: userId,
       restrictMultipleAccounts: true,
-      integrationId: process.env.MESH_INTEGRATION_ID,
+      integrationId: CoinIntegrationId,
       transferOptions: {
         transferType,
         toAddresses: addresses,
-        isInclusiveFeeEnabled: false
+        isInclusiveFeeEnabled: false,
+        ...(transferType === "deposit" && { AmountInFiat:amount })
       }
     };
-
+ console.log("Link Created: ", JSON.stringify(requestBody))
     // Call Mesh API directly
     const response = await fetch(`${process.env.MESH_API_URL}/api/v1/linktoken`, {
       method: 'POST',
@@ -178,7 +190,7 @@ app.post('/api/mesh/payment-link', async (req, res) => {
         details: data.message || data.error
       });
     }
-
+   
     res.json({
       linkToken: data.content?.linkToken,
       status: data.status,
@@ -259,51 +271,6 @@ app.get('/api/mesh/transactions/:accountId', async (req, res) => {
     console.error('Error fetching transactions:', error);
     res.status(500).json({
       error: 'Failed to fetch transactions',
-      details: error.message
-    });
-  }
-});
-
-// Mesh Connect: Get Auth Token
-app.get('/api/mesh/auth/:accountId', async (req, res) => {
-  try {
-    const { accountId } = req.params;
-    const authToken = await meshClient.getAuthToken(accountId);
-    res.json(authToken);
-  } catch (error) {
-    console.error('Error fetching auth token:', error);
-    res.status(500).json({
-      error: 'Failed to fetch auth token',
-      details: error.message
-    });
-  }
-});
-
-// Mesh Connect: Execute Transfer
-app.post('/api/mesh/transfer', async (req, res) => {
-  try {
-    const transferParams = req.body;
-    const transfer = await meshClient.executeTransfer(transferParams);
-    res.json(transfer);
-  } catch (error) {
-    console.error('Error executing transfer:', error);
-    res.status(500).json({
-      error: 'Failed to execute transfer',
-      details: error.message
-    });
-  }
-});
-
-// Mesh Connect: Get Transfer Status
-app.get('/api/mesh/transfer/:transferId', async (req, res) => {
-  try {
-    const { transferId } = req.params;
-    const status = await meshClient.getTransferStatus(transferId);
-    res.json(status);
-  } catch (error) {
-    console.error('Error fetching transfer status:', error);
-    res.status(500).json({
-      error: 'Failed to fetch transfer status',
       details: error.message
     });
   }
