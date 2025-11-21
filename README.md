@@ -94,22 +94,16 @@ npm install
 3. Set up backend environment variables:
 ```bash
 cp .env.example .env
-# Edit .env and add your Mesh Connect credentials:
+# Create .env and add your Mesh Connect credentials:
 # MESH_CLIENT_ID=your_client_id_here
 # MESH_CLIENT_SECRET=your_client_secret_here
+# MESH_API_URL="https://sandbox-integration-api.meshconnect.com"
 ```
 
 4. Install frontend dependencies:
 ```bash
 cd ../frontend
 npm install
-```
-
-5. Set up frontend environment variables:
-```bash
-cp .env.example .env
-# Edit .env and add your Mesh Connect Client ID:
-# VITE_MESH_CLIENT_ID=your_client_id_here
 ```
 
 ### Running the Application
