@@ -6,12 +6,9 @@ A full-stack e-commerce demo application built with React and Node.js, featuring
 
 - Browse 10 products (shoes and clothing)
 - Shopping cart with quantity management
-- User authentication and profile management
 - Checkout with Mesh Connect crypto payment integration
-- Wallet address management (add/remove multiple wallets)
 - Real-time cryptocurrency portfolio tracking with performance metrics
 - Order confirmation with portfolio display
-- Transaction history viewing
 - In-memory data storage
 - Full Mesh Connect API client integration
 
