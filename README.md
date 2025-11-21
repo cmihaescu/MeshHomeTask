@@ -6,12 +6,9 @@ A full-stack e-commerce demo application built with React and Node.js, featuring
 
 - Browse 10 products (shoes and clothing)
 - Shopping cart with quantity management
-- User authentication and profile management
 - Checkout with Mesh Connect crypto payment integration
-- Wallet address management (add/remove multiple wallets)
 - Real-time cryptocurrency portfolio tracking with performance metrics
 - Order confirmation with portfolio display
-- Transaction history viewing
 - In-memory data storage
 - Full Mesh Connect API client integration
 
@@ -40,7 +37,6 @@ MeshHomeTask/
 │   ├── server.js          # Express server with all API routes
 │   ├── store.js           # In-memory data store (users, tokens, wallets, orders)
 │   ├── meshClient.js      # Mesh Connect API client
-│   ├── .env.example       # Environment variables template
 │   └── .gitignore
 ├── frontend/
 │   ├── package.json
@@ -48,7 +44,6 @@ MeshHomeTask/
 │   ├── index.html
 │   ├── public/
 │   │   └── favicon.ico    # Application favicon
-│   ├── .env.example       # Frontend environment variables
 │   ├── .gitignore
 │   └── src/
 │       ├── main.jsx
@@ -67,7 +62,9 @@ MeshHomeTask/
 │           ├── Profile.jsx        # User profile component
 │           ├── Auth.jsx           # Login/signup component
 │           ├── Transactions.jsx   # Transaction history component
-│           └── MeshWidget.jsx     # Mesh Connect widget
+│           └── MeshSDK.jsx        # Mesh Connect widget
+│           └── MeshSDKPostmanLink.jsx        # Mesh Connect widget using postman generated link input
+│           └── Portfolio.jsx        # User portfolio
 ├── README.md
 ├── API_DOCUMENTATION.md   # Complete API reference
 └── MESH_CSP_FIX.md        # CSP troubleshooting guide
@@ -97,22 +94,16 @@ npm install
 3. Set up backend environment variables:
 ```bash
 cp .env.example .env
-# Edit .env and add your Mesh Connect credentials:
+# Create .env and add your Mesh Connect credentials:
 # MESH_CLIENT_ID=your_client_id_here
 # MESH_CLIENT_SECRET=your_client_secret_here
+# MESH_API_URL="https://sandbox-integration-api.meshconnect.com"
 ```
 
 4. Install frontend dependencies:
 ```bash
 cd ../frontend
 npm install
-```
-
-5. Set up frontend environment variables:
-```bash
-cp .env.example .env
-# Edit .env and add your Mesh Connect Client ID:
-# VITE_MESH_CLIENT_ID=your_client_id_here
 ```
 
 ### Running the Application
@@ -148,9 +139,6 @@ The frontend will run on `http://localhost:3000`
 - `POST /api/orders` - Create a new order
 - `GET /api/orders` - Get all orders
 
-### Portfolio
-- `GET /api/v1/holdings/portfolio/:userId` - Get user's cryptocurrency portfolio with performance metrics
-
 ### Wallet Management
 - `GET /api/wallet-addresses/:userId` - Get user's wallet addresses
 - `POST /api/wallet-addresses` - Add a new wallet address
@@ -158,7 +146,7 @@ The frontend will run on `http://localhost:3000`
 
 ### Mesh Connect
 - `POST /api/mesh/payment-link` - Generate link token for Mesh SDK
-- `POST /api/v1/holdings/portfolio` - Get account portfolio
+- `GET /api/v1/holdings/portfolio/:userId` - Get user's cryptocurrency portfolio with performance metrics
 - `GET /api/mesh/holdings/:accountId` - Get account holdings
 - `GET /api/mesh/transactions/:accountId` - Get account transactions
 
@@ -166,37 +154,28 @@ See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for complete API reference.
 
 ## Usage
 
-1. **Authentication** (Optional):
-   - Click "Login" in the navbar to create an account or sign in
-   - Authenticated users can manage wallets and view portfolio
+1. **Browse Products**: View the 10 available products on the shop page
 
-2. **Browse Products**: View the 10 available products on the shop page
+2. **Add to Cart**: Select quantity and click "Add to Cart"
 
-3. **Add to Cart**: Select quantity and click "Add to Cart"
+3. **View Cart**: Click the cart icon in the navbar (shows item count badge)
 
-4. **View Cart**: Click the cart icon in the navbar (shows item count badge)
+4. **Checkout**: Proceed to checkout from the cart page
 
-5. **Checkout**: Proceed to checkout from the cart page
-
-6. **Payment**:
+5. **Payment**:
    - Option 1: Pay with Mesh Connect (cryptocurrency)
-   - Option 2: Manual order (for testing without payment)
+   - Option 2: Manual order (for testing with payment link generated from postman)
 
-7. **Mesh Payment Flow**:
+6. **Mesh Payment Flow**:
    - Paste link token from Postman (or use backend API to generate)
    - Click "Connect Wallet & Pay"
    - Complete payment in Mesh Connect modal
    - Order is automatically created upon successful payment
    - Redirected to confirmation page with portfolio display
+   - Option to do deposit from confirmation page
 
-8. **Wallet Management** (Authenticated users):
-   - Navigate to "Account" page from navbar
-   - Add wallet addresses manually
-   - View connected wallets
-   - Remove wallets as needed
-
-9. **Portfolio Tracking**:
-   - View real-time portfolio on confirmation page after purchase
+7. **Portfolio Tracking**:
+   - View real-time portfolio on confirmation page after purchase and on account page
    - See total portfolio value, cost basis, and performance percentage
    - View individual cryptocurrency positions with:
      - Amount held
@@ -237,15 +216,9 @@ This application integrates with [Mesh Connect](https://meshconnect.com/) for cr
 
 1. Sign up at https://dashboard.meshconnect.com/
 2. Get your Client ID and Client Secret
-3. Add credentials to `.env` files (backend and frontend)
+3. Add credentials to `.env` files (backend)
 4. **Important**: Whitelist your domain in Mesh dashboard to avoid CSP errors
    - See [MESH_CSP_FIX.md](./MESH_CSP_FIX.md) for troubleshooting
-
-### Testing Without Mesh
-
-You can test the application without Mesh credentials:
-- Use the "Manual Order" option at checkout
-- This creates orders without payment processing
 
 ## Future Enhancements
 
@@ -262,28 +235,5 @@ You can test the application without Mesh credentials:
 - Implement real-time price updates via WebSocket
 - Add push notifications for price alerts
 - Deploy to production (Vercel/Railway/etc.)
-
-## Development Notes
-
-- The application uses in-memory storage, so all data is lost when the server restarts
-- In-memory stores include: users, auth tokens, wallet addresses, Mesh tokens, orders, and transactions
-- For production, consider implementing a proper database (PostgreSQL, MongoDB, etc.)
-- CORS is enabled for all origins in development - restrict in production
-- Mesh Connect requires domain whitelisting - see MESH_CSP_FIX.md
-- Cart data and authentication persists in localStorage (survives page refresh)
-- User authentication is simple (no password hashing) - implement proper auth for production
-- Portfolio data structure includes:
-  - `portfolioCostBasis`: Total initial investment
-  - `actualPortfolioPerformance`: Overall portfolio performance percentage
-  - `cryptocurrenciesValue`: Total value of all crypto holdings
-  - `cryptocurrencyPositions`: Array of individual positions with metrics
-    - `symbol`, `name`, `amount`, `marketValue`, `costBasis`, `portfolioPercentage`
-    - `totalReturn`, `returnPercentage`, `lastPrice`
-
-## License
-
-MIT
-
-## Author
 
 Demo Shop Application
