@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 
-const MeshSDKPostmanLink = ({ handleOrderCompletion, orderComplete }) => {
+const MeshSDKPostmanLink = ({ orderComplete }) => {
     const [isLoading, setIsLoading] = useState(false);
-    const [meshLink, setMeshLink] = useState(null);
+    const [meshLinkSDK, setMeshLinkSDK] = useState(null);
     const [linkToken, setLinkToken] = useState('');
     const { cartItems, getCartTotal, clearCart } = useCart();
     const navigate = useNavigate();
@@ -15,14 +15,30 @@ const MeshSDKPostmanLink = ({ handleOrderCompletion, orderComplete }) => {
     useEffect(() => {
         const link = createLink({
             clientId: import.meta.env.VITE_MESH_CLIENT_ID,
+            onEvent: (event) => {
+                console.log("event: ", event)
+                switch (event.type) {
+                    case 'pageLoaded':
+                        console.log("onEvent pageLoaded fired: ", event)
+                        setAbortMessage(false)
+                        setSuccessMessage(false)
+                        break
+                    case 'close':
+                        console.log("onEvent close fired: ", event)
+                        break
+                    default:
+                        console.log("Unmapped/Unknown event type")
+                        break;
+                }
+            },
             onIntegrationConnected: (payload) => {
                 console.log("Connected!", payload);
                 const { accessToken } = payload.accessToken.accountTokens[0]
                 const { refreshToken } = payload.accessToken.accountTokens[0]
                 // Store Mesh tokens if present
-                if (accessToken 
-                    && refreshToken 
-                    && !localStorage.getItem('meshAccessToken') 
+                if (accessToken
+                    && refreshToken
+                    && !localStorage.getItem('meshAccessToken')
                     && !localStorage.getItem('meshRefreshToken')) {
                     localStorage.setItem('meshAccessToken', accessToken);
                     localStorage.setItem('meshRefreshToken', refreshToken);
@@ -41,12 +57,12 @@ const MeshSDKPostmanLink = ({ handleOrderCompletion, orderComplete }) => {
             },
             onTransferFinished: (payload) => {
                 console.log("Transfer result:", payload);
-                handleOrderCompletion(payload);
+                setIsLoading(false);
                 navigate(`/confirmation`)
                 clearCart()
             }
         });
-        setMeshLink(link);
+        setMeshLinkSDK(link);
     }, [cartItems, navigate, orderComplete]);
 
     const handleManualLinkPayment = async () => {
@@ -55,7 +71,7 @@ const MeshSDKPostmanLink = ({ handleOrderCompletion, orderComplete }) => {
             return;
         }
 
-        if (!meshLink) {
+        if (!meshLinkSDK) {
             setError('Mesh Link SDK not initialized');
             return;
         }
@@ -63,7 +79,7 @@ const MeshSDKPostmanLink = ({ handleOrderCompletion, orderComplete }) => {
         try {
             setError(null);
             setIsLoading(true);
-            meshLink.openLink(linkToken.trim());
+            meshLinkSDK.openLink(linkToken.trim());
         } catch (err) {
             console.error('Error opening link:', err);
             setError(err.message || 'Failed to open Mesh widget');
