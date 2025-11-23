@@ -147,9 +147,9 @@ const Checkout = () => {
             </label>
           </div>
 
-          {paymentMethod === 'crypto' && <MeshSDK handleOrderCompletion={handleOrderCompletion} userId={userId} orderComplete={orderComplete}  transferType={"payment"}/>}
+          {paymentMethod === 'crypto' && <MeshSDK userId={userId} orderComplete={orderComplete}  transferType={"payment"}/>}
 
-          {paymentMethod === 'manual-link' && <MeshSDKPostmanLink handleOrderCompletion={handleOrderCompletion} orderComplete={orderComplete} />       }
+          {paymentMethod === 'manual-link' && <MeshSDKPostmanLink orderComplete={orderComplete} />       }
         </div>
       </div>
 

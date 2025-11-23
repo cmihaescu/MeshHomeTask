@@ -149,7 +149,7 @@ const Portfolio = ({ userId }) => {
                     </div>
                 )}
             </div>}
-            <MeshSDK handleOrderCompletion={() => { console.log('works') }} userId={userId} transferType={"deposit"} />
+            <MeshSDK userId={userId} transferType={"deposit"} />
 
         </div>
     )

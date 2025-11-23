@@ -5,9 +5,9 @@ import { useNavigate } from 'react-router-dom';
 
 
 
-const MeshSDK = ({ handleOrderCompletion, userId, orderComplete, transferType }) => {
+const MeshSDK = ({ userId, orderComplete, transferType }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [meshLink, setMeshLink] = useState(null);
+  const [meshLinkSDK, setMeshLinkSDK] = useState(null);
   const { cartItems, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
   const [error, setError] = useState(null);
@@ -32,7 +32,7 @@ const MeshSDK = ({ handleOrderCompletion, userId, orderComplete, transferType })
             console.log("onEvent close fired: ", event)
           break
           default:
-            // Unknown transfer type
+            console.log("Unmapped/Unknown event type")
             break;
         }
       },
@@ -63,20 +63,19 @@ const MeshSDK = ({ handleOrderCompletion, userId, orderComplete, transferType })
       },
       onTransferFinished: (payload) => {
         console.log("Transfer result:", payload);
-        handleOrderCompletion(payload);
         setSuccessMessage(true)
+        setIsLoading(false)
         transferCompletedRef.current = true;
-        console.log('payload.status ', payload.status)
         navigate(`/confirmation`)
         clearCart()
       }
     });
-    setMeshLink(link);
+    setMeshLinkSDK(link);
   }, [cartItems, navigate, orderComplete]);
 
 
   const handleCryptoPayment = async () => {
-    if (!meshLink) {
+    if (!meshLinkSDK) {
       setError('Mesh Link SDK not initialized');
       return;
     }
@@ -118,7 +117,7 @@ const MeshSDK = ({ handleOrderCompletion, userId, orderComplete, transferType })
       }
 
       // Open Mesh widget with the link token
-      meshLink.openLink(data.linkToken);
+      meshLinkSDK.openLink(data.linkToken);
     } catch (err) {
       console.error(`Error initiating crypto ${transferType}:`, err);
       setError(err.message || `Failed to initiate ${transferType}`);
