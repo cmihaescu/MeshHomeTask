@@ -27,12 +27,13 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
             console.log("onEvent pageLoaded fired: ", event)
             setAbortMessage(false)
             setSuccessMessage(false)
+            transferCompletedRef.current=false
           break
           case 'close':
             console.log("onEvent close fired: ", event)
           break
           default:
-            console.log("Unmapped/Unknown event type")
+            
             break;
         }
       },
@@ -51,18 +52,17 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
         }
       },
       onExit: (error) => {
-        console.log("Exit. transferCompletedRef =", transferCompletedRef.current);
+        console.log("onExit fired, transferCompletedRef =", transferCompletedRef.current);
         if (error) {
           console.error("User closed or error:", error);
-          setError(error.message || `${transferType} connection failed`);
+          setError(error.errorMessage || `${transferType} connection failed`);
         } else if (!transferCompletedRef.current) {
-          console.log("onExit closed the widget");
           setAbortMessage(true);
         }
         setIsLoading(false);
       },
       onTransferFinished: (payload) => {
-        console.log("Transfer result:", payload);
+        console.log("onTransferFinished fired, Transfer result:", payload);
         setSuccessMessage(true)
         setIsLoading(false)
         transferCompletedRef.current = true;
@@ -84,7 +84,7 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
       setError(null);
       setIsLoading(true);
 
-      // Fetch saved wallet addresses
+      // Fetch saved wallet addresses - skipped
       const addressesResponse = await fetch(`/api/wallet-addresses/${userId}`);
       let walletAddresses = [];
       if (addressesResponse.ok) {
