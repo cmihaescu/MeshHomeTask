@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const store = require('./store');
 const MeshClient = require('./meshClient');
 const webhookRouter = require('./webhook');
+const webhookBadRequestRouter = require('./webhook-bad-request-duplicate-response');
 require('dotenv').config()
 
 const app = express();
@@ -24,6 +25,7 @@ app.use(express.json());
 
 // Mesh webhook
 app.use(webhookRouter);
+app.use(webhookBadRequestRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

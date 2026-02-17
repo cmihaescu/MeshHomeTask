@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-// POST /webhook - returns "Duplicate request" response to all webhook calls
-router.post('/webhook', (req, res) => {
+// POST /webhook-bad-request-duplicate-response - returns "Duplicate request" response
+router.post('/webhook-bad-request-duplicate-response', (req, res) => {
   console.log('=== Mesh Webhook Received (Duplicate Response) ===');
   console.log('Timestamp:', new Date().toISOString());
   console.log('Headers:', JSON.stringify(req.headers, null, 2));
