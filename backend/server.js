@@ -3,6 +3,7 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const store = require('./store');
 const MeshClient = require('./meshClient');
+const webhookRouter = require('./webhook');
 require('dotenv').config()
 
 const app = express();
@@ -20,6 +21,9 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+
+// Mesh webhook
+app.use(webhookRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -375,7 +379,28 @@ app.delete('/api/wallet-addresses/:userId/:addressId', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Mesh Connect configured: ${!!(meshClient.clientId && meshClient.clientSecret)}`);
+
+  // Open a tunnel so external services (like Mesh Connect) can reach localhost
+  try {
+    const localtunnel = require('localtunnel');
+    const tunnel = await localtunnel({ port: PORT });
+
+    console.log('\n======================================');
+    console.log('Webhook tunnel is live!');
+    console.log(`Public URL: ${tunnel.url}`);
+    console.log(`Register this as your webhook URL on Mesh Connect dashboard:`);
+    console.log(`  ${tunnel.url}/webhook`);
+    console.log('======================================\n');
+
+    tunnel.on('close', () => {
+      console.log('Tunnel closed');
+    });
+  } catch (err) {
+    console.warn('Could not open tunnel:', err.message);
+    console.warn('Webhooks from external services will not reach localhost.');
+    console.warn('Install localtunnel: npm install localtunnel');
+  }
 });
