@@ -348,3 +348,132 @@ body {
   padding: 2rem;
   color: #666;
 }
+
+/* ── JSON Tree Viewer ─────────────────────────────────────────── */
+
+.jtv-page {
+  max-width: 1100px;
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.jtv-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.jtv-header h2 {
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.jtv-subtitle {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Drop zone */
+.jtv-dropzone {
+  background: #fff;
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 4rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.jtv-dropzone:hover {
+  border-color: #007bff;
+  background: #f8f9ff;
+}
+
+.jtv-dropzone--active {
+  border-color: #007bff;
+  background: #e8f0fe;
+}
+
+.jtv-dropzone--error {
+  border-color: #dc3545;
+  background: #fff8f8;
+}
+
+.jtv-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.jtv-spin {
+  display: inline-block;
+  animation: jtv-spin 1.2s linear infinite;
+}
+
+@keyframes jtv-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.jtv-drop-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.jtv-drop-sub {
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.jtv-drop-note {
+  color: #bbb;
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+/* File info bar */
+.jtv-file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  color: #333;
+}
+
+.jtv-file-size {
+  color: #888;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* Toolbar above tree */
+.jtv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.jtv-stats {
+  font-size: 13px;
+  color: #666;
+}
+
+/* Virtual scrolled tree container */
+.jtv-container {
+  height: 65vh;
+  overflow-y: auto;
+  background: #282c34;
+  border-radius: 8px;
+  position: relative;
+}
+
+/* Individual tree row hover highlight */
+.jtv-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}

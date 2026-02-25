@@ -14,6 +14,7 @@ const Navbar = () => {
       <div className="nav-links">
         <Link to="/">Shop</Link>
         <Link to="/account">Account</Link>
+        <Link to="/json-viewer">JSON Viewer</Link>
         <Link to="/cart" style={{ position: 'relative' }}>
           Cart
           {cartCount > 0 && (

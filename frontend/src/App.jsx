@@ -7,6 +7,7 @@ import Cart from './components/Cart';
 import Checkout from './components/Checkout';
 import Account from './components/Account';
 import Confirmation from './components/Confirmation';
+import JsonTreeViewer from './components/JsonTreeViewer';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/account" element={<Account />} />
           <Route path="/confirmation" element={<Confirmation />} />
+          <Route path="/json-viewer" element={<JsonTreeViewer />} />
         </Routes>
       </CartProvider>
     </Router>
