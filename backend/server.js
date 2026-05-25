@@ -1,4 +1,6 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const store = require('./store');
@@ -167,7 +169,6 @@ app.post('/api/mesh/payment-link', async (req, res) => {
     const requestBody = {
       userId: userId,
       restrictMultipleAccounts: true,
-      integrationId: CoinIntegrationId,
       transferOptions: {
         transferType,
         toAddresses: addresses,
@@ -233,7 +234,6 @@ app.get('/api/v1/holdings/portfolio/:userId', async (req, res) => {
     });
 
     const data = await response.json();
-    console.log("Call Mesh API for portfolio", JSON.stringify(data, null, 2));
     if (!response.ok) {
       console.error('Mesh API error:', data);
       return res.status(response.status).json({
@@ -379,6 +379,13 @@ app.delete('/api/wallet-addresses/:userId/:addressId', (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// Serve frontend in production (when ../frontend/dist exists after build)
+const frontendDist = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get('*', (req, res) => res.sendFile(path.join(frontendDist, 'index.html')));
+}
 
 // Start server
 app.listen(PORT, () => {
