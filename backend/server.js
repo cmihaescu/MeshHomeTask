@@ -233,7 +233,7 @@ app.get('/api/v1/holdings/portfolio/:userId', async (req, res) => {
     });
 
     const data = await response.json();
-    console.log(JSON.stringify(data, null, 2));
+    console.log("Call Mesh API for portfolio", JSON.stringify(data, null, 2));
     if (!response.ok) {
       console.error('Mesh API error:', data);
       return res.status(response.status).json({
