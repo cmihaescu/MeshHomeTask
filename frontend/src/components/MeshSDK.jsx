@@ -15,11 +15,22 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
   const [successMessage, setSuccessMessage] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0)
   const transferCompletedRef = useRef(false);
+  
+  const accessTokens = [
+    {
+      accessToken: '',
+      brokerType: "binanceInternationalDirect",
+      brokerName: 'Binance',
+      accountId: '',
+      accountName: ''
+    }
+  ]
 
 
   useEffect(() => {
     const link = createLink({
       clientId: import.meta.env.VITE_MESH_CLIENT_ID,
+      accessTokens: [],
       onEvent: (event) => {
         console.log("event: ",event)
         switch (event.type) {

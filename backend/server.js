@@ -162,7 +162,7 @@ app.post('/api/mesh/payment-link', async (req, res) => {
     const addresses = [{
           networkId: "e3c7fdd8-b1fc-4e51-85ae-bb276e075611",
           symbol: "USDC",
-          address: "0x910aeb59ba75c8226a84e3c1b0db3b55a4ec2a40",
+          address: "0x6A36e7e3682Ff903a0680Da2F8C5f2a34A3d3266",
           ...(transferType === "payment" && { amount })
         }];
 
@@ -170,7 +170,7 @@ app.post('/api/mesh/payment-link', async (req, res) => {
       userId: userId,
       restrictMultipleAccounts: true,
       transferOptions: {
-        transferType,
+        transferType:"deposit",
         toAddresses: addresses,
         isInclusiveFeeEnabled: false,
         ...(transferType === "deposit" && { AmountInFiat:amount })
