@@ -1,25 +1,55 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const store = require('./store');
 const MeshClient = require('./meshClient');
+const { resolveToAddress } = require('./networkAddresses');
+const webhookRouter = require('./webhook');
+const webhookBadRequestRouter = require('./webhook-bad-request-duplicate-response');
 require('dotenv').config()
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 const CoinIntegrationId="47624467-e52e-4938-a41a-7926b6c27acf"
-// Initialize Mesh Client
-const meshClient = new MeshClient({
-  clientId: process.env.MESH_CLIENT_ID,
-  clientSecret: process.env.MESH_CLIENT_SECRET,
-  apiUrl: process.env.MESH_API_URL,
-});
+
+// Default Mesh environment when the client doesn't specify one
+const DEFAULT_MESH_ENV = (process.env.MESH_ENV || 'sandbox').toLowerCase();
+
+// Resolve the active Mesh credentials/URL for the requested environment.
+// The frontend sends `env` ('sandbox' | 'production') with each Mesh call;
+// anything other than 'production' falls back to sandbox.
+function resolveMeshConfig(env) {
+  const isProd = String(env || DEFAULT_MESH_ENV).toLowerCase() === 'production';
+  return {
+    env: isProd ? 'production' : 'sandbox',
+    clientId: process.env.MESH_CLIENT_ID,
+    clientSecret: isProd
+      ? process.env.MESH_CLIENT_SECRET_PRODUCTION
+      : process.env.MESH_CLIENT_SECRET_SANDBOX,
+    apiUrl: isProd
+      ? process.env.MESH_API_URL_PRODUCTION
+      : process.env.MESH_API_URL_SANDBOX,
+  };
+}
+
+// Build a MeshClient for the requested environment
+const meshClientFor = (env) => new MeshClient(resolveMeshConfig(env));
+
+// In-memory cache for the (static) supported networks, keyed by env.
+// The list rarely changes, so we only hit Mesh once per env per server run.
+const networksCache = {};
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 // Routes
+
+// Mesh webhook
+app.use(webhookRouter);
+app.use(webhookBadRequestRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -120,7 +150,7 @@ app.get('/api/orders', (req, res) => {
 // Mesh Connect: Generate Payment Link Token
 app.post('/api/mesh/payment-link', async (req, res) => {
   try {
-    const { userId, amount, toAddresses, transferType } = req.body;
+    const { userId, amount, toAddresses, transferType, env, networkId, symbol, address } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Valid amount is required' });
@@ -130,9 +160,11 @@ app.post('/api/mesh/payment-link', async (req, res) => {
       return res.status(400).json({ error: 'No userId' });
     }
 
-    if (!process.env.MESH_CLIENT_ID || !process.env.MESH_CLIENT_SECRET) {
+    const meshConfig = resolveMeshConfig(env);
+
+    if (!meshConfig.clientId || !meshConfig.clientSecret) {
       return res.status(500).json({
-        error: 'Mesh Connect not configured. Please set MESH_CLIENT_ID and MESH_CLIENT_SECRET environment variables.'
+        error: `Mesh Connect not configured for ${meshConfig.env}. Please set MESH_CLIENT_ID and the ${meshConfig.env} client secret/API URL environment variables.`
       });
     }
 
@@ -151,32 +183,45 @@ app.post('/api/mesh/payment-link', async (req, res) => {
     //       amount: amount
     //     }];
 
+    // Network + token come from the user's selection (cart page); fall back to
+    // the EVM/USDC defaults when not provided (e.g. the deposit widget).
+    const resolvedNetworkId = networkId || "aa883b03-120d-477c-a588-37c2afd3ca71";
+    const resolvedSymbol = symbol || "USDC";
+    // Destination address resolution order:
+    //   1. The per-network map in networkAddresses.js (valid for that chain)
+    //   2. An address supplied in the request (shopper-provided at checkout when
+    //      the selected network has no configured address)
+    //   3. The default EVM receiving address (legacy fallback)
+    const resolvedAddress =
+      resolveToAddress(resolvedNetworkId, resolvedSymbol) ||
+      address ||
+      "0x6A36e7e3682Ff903a0680Da2F8C5f2a34A3d3266";
+
     const addresses = [{
-          networkId: "e3c7fdd8-b1fc-4e51-85ae-bb276e075611",
-          symbol: "USDC",
-          address: "0x910aeb59ba75c8226a84e3c1b0db3b55a4ec2a40",
+          networkId: resolvedNetworkId,
+          symbol: resolvedSymbol,
+          address: resolvedAddress,
           ...(transferType === "payment" && { amount })
         }];
 
     const requestBody = {
       userId: userId,
       restrictMultipleAccounts: true,
-      integrationId: CoinIntegrationId,
       transferOptions: {
-        transferType,
+        transferType:"deposit",
         toAddresses: addresses,
         isInclusiveFeeEnabled: false,
         ...(transferType === "deposit" && { AmountInFiat:amount })
       }
     };
- console.log("Link Created: ", JSON.stringify(requestBody))
+ console.log(`Link Created (${meshConfig.env}): `, JSON.stringify(requestBody))
     // Call Mesh API directly
-    const response = await fetch(`${process.env.MESH_API_URL}/api/v1/linktoken`, {
+    const response = await fetch(`${meshConfig.apiUrl}/api/v1/linktoken`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Client-Id': process.env.MESH_CLIENT_ID,
-        'X-Client-Secret': process.env.MESH_CLIENT_SECRET
+        'X-Client-Id': meshConfig.clientId,
+        'X-Client-Secret': meshConfig.clientSecret
       },
       body: JSON.stringify(requestBody)
     });
@@ -209,25 +254,25 @@ app.post('/api/mesh/payment-link', async (req, res) => {
 app.get('/api/v1/holdings/portfolio/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    const meshConfig = resolveMeshConfig(req.query.env);
 
-    if (!process.env.MESH_CLIENT_ID || !process.env.MESH_CLIENT_SECRET) {
+    if (!meshConfig.clientId || !meshConfig.clientSecret) {
       return res.status(500).json({
-        error: 'Mesh Connect not configured. Please set MESH_CLIENT_ID and MESH_CLIENT_SECRET environment variables.'
+        error: `Mesh Connect not configured for ${meshConfig.env}. Please set MESH_CLIENT_ID and the ${meshConfig.env} client secret/API URL environment variables.`
       });
     }
 
     // Call Mesh API for portfolio
-    const response = await fetch(`${process.env.MESH_API_URL}/api/v1/holdings/portfolio?UserId=${userId}`, {
+    const response = await fetch(`${meshConfig.apiUrl}/api/v1/holdings/portfolio?UserId=${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'X-Client-Id': process.env.MESH_CLIENT_ID,
-        'X-Client-Secret': process.env.MESH_CLIENT_SECRET
+        'X-Client-Id': meshConfig.clientId,
+        'X-Client-Secret': meshConfig.clientSecret
       }
     });
 
     const data = await response.json();
-    console.log(JSON.stringify(data, null, 2));
     if (!response.ok) {
       console.error('Mesh API error:', data);
       return res.status(response.status).json({
@@ -246,11 +291,68 @@ app.get('/api/v1/holdings/portfolio/:userId', async (req, res) => {
   }
 });
 
+// Mesh Connect: Get supported networks (and their tokens).
+// Response is effectively static, so it's cached in-memory per env.
+app.get('/api/mesh/networks', async (req, res) => {
+  try {
+    const meshConfig = resolveMeshConfig(req.query.env);
+
+    if (!meshConfig.clientId || !meshConfig.clientSecret) {
+      return res.status(500).json({
+        error: `Mesh Connect not configured for ${meshConfig.env}. Please set MESH_CLIENT_ID and the ${meshConfig.env} client secret/API URL environment variables.`
+      });
+    }
+
+    if (networksCache[meshConfig.env]) {
+      return res.json(networksCache[meshConfig.env]);
+    }
+
+    const response = await fetch(`${meshConfig.apiUrl}/api/v1/transfers/managed/networks`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': meshConfig.clientId,
+        'X-Client-Secret': meshConfig.clientSecret
+      }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Mesh API error (networks):', data);
+      return res.status(response.status).json({
+        error: 'Failed to fetch networks',
+        details: data.message || data.error
+      });
+    }
+
+    networksCache[meshConfig.env] = data;
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching networks:', error);
+    res.status(500).json({
+      error: 'Failed to fetch networks',
+      details: error.message
+    });
+  }
+});
+
+// Mesh Connect: Does the selected network/token have a configured receiving
+// address? The cart uses this to decide whether to prompt the shopper for a
+// destination address. Network IDs are env-independent, so no env is needed.
+app.get('/api/mesh/network-address', (req, res) => {
+  const { networkId, symbol } = req.query;
+  if (!networkId) {
+    return res.status(400).json({ error: 'networkId is required' });
+  }
+  const resolved = resolveToAddress(networkId, symbol);
+  res.json({ configured: !!resolved, address: resolved || null });
+});
+
 // Mesh Connect: Get Account Holdings
 app.get('/api/mesh/holdings/:accountId', async (req, res) => {
   try {
     const { accountId } = req.params;
-    const holdings = await meshClient.getHoldings(accountId);
+    const holdings = await meshClientFor(req.query.env).getHoldings(accountId);
     res.json(holdings);
   } catch (error) {
     console.error('Error fetching holdings:', error);
@@ -265,7 +367,7 @@ app.get('/api/mesh/holdings/:accountId', async (req, res) => {
 app.get('/api/mesh/transactions/:accountId', async (req, res) => {
   try {
     const { accountId } = req.params;
-    const transactions = await meshClient.getTransactions(accountId);
+    const transactions = await meshClientFor(req.query.env).getTransactions(accountId);
     res.json(transactions);
   } catch (error) {
     console.error('Error fetching transactions:', error);
@@ -374,8 +476,22 @@ app.delete('/api/wallet-addresses/:userId/:addressId', (req, res) => {
   }
 });
 
+// Serve frontend in production (when ../frontend/dist exists after build)
+const frontendDist = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get('*', (req, res) => res.sendFile(path.join(frontendDist, 'index.html')));
+}
+
 // Start server
 app.listen(PORT, () => {
+  const sandboxCfg = resolveMeshConfig('sandbox');
+  const prodCfg = resolveMeshConfig('production');
   console.log(`Server running on port ${PORT}`);
-  console.log(`Mesh Connect configured: ${!!(meshClient.clientId && meshClient.clientSecret)}`);
+  console.log(`Default Mesh environment: ${DEFAULT_MESH_ENV}`);
+  console.log(`Mesh sandbox configured: ${!!(sandboxCfg.clientId && sandboxCfg.clientSecret && sandboxCfg.apiUrl)}`);
+  console.log(`Mesh production configured: ${!!(prodCfg.clientId && prodCfg.clientSecret && prodCfg.apiUrl)}`);
+  console.log(`\nTo receive webhooks from Mesh Connect, expose this server with ngrok:`);
+  console.log(`  ngrok http ${PORT}`);
+  console.log(`Then register the ngrok URL as: https://<your-id>.ngrok-free.app/webhook`);
 });

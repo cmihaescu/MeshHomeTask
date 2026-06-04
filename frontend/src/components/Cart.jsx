@@ -1,10 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import NetworkTokenSelector from './NetworkTokenSelector';
+import { useNetworkAddress } from '../hooks/useNetworkAddress';
 
 const Cart = () => {
   const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
+
+  // Network + token + (optional) destination address, persisted so other flows
+  // (e.g. checkout / the Mesh widget) can read it.
+  const [transferSelection, setTransferSelection] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('meshTransferSelection')) || { networkId: '', symbol: '', address: '' };
+    } catch {
+      return { networkId: '', symbol: '', address: '' };
+    }
+  });
+
+  // Whether the backend already has a receiving address for this network/token.
+  const { configured, loading: addressLoading } = useNetworkAddress(
+    transferSelection.networkId,
+    transferSelection.symbol
+  );
+  // Prompt for an address only once we know none is configured for the selection.
+  const needsAddress = !!transferSelection.networkId && !addressLoading && !configured;
+
+  const persistSelection = (selection) => {
+    setTransferSelection(selection);
+    localStorage.setItem('meshTransferSelection', JSON.stringify(selection));
+  };
+
+  // Network/token changed — clear any previously entered address so it can't
+  // leak across networks (a stale address would be invalid on the new chain).
+  const handleSelectionChange = ({ networkId, symbol }) => {
+    persistSelection({ networkId, symbol, address: '' });
+  };
+
+  const handleAddressChange = (e) => {
+    persistSelection({ ...transferSelection, address: e.target.value });
+  };
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -114,9 +149,56 @@ const Cart = () => {
         ))}
       </div>
 
+      {/* Transfer network + token selection (populated from the cached Mesh networks list) */}
       <div
         style={{
           marginTop: '30px',
+          padding: '20px',
+          border: '1px solid #ddd',
+          backgroundColor: '#fff',
+          borderRadius: '8px',
+        }}
+      >
+        <h3 style={{ marginTop: 0, marginBottom: '5px', fontSize: '16px' }}>Payment network &amp; token</h3>
+        <p style={{ fontSize: '13px', color: '#666', marginTop: 0, marginBottom: '15px' }}>
+          Choose the network and crypto token you'll use to pay at checkout.
+        </p>
+        <NetworkTokenSelector value={transferSelection} onChange={handleSelectionChange} />
+
+        {/* Shown only when the selected network/token has no merchant address
+            configured on the backend — the shopper must supply a destination
+            address that's valid for the chosen chain. */}
+        {needsAddress && (
+          <div style={{ marginTop: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '13px' }}>
+              Destination address
+            </label>
+            <input
+              type="text"
+              value={transferSelection.address || ''}
+              onChange={handleAddressChange}
+              placeholder="Enter the receiving address for this network"
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                border: '1px solid #ccc',
+                borderRadius: '6px',
+                fontFamily: 'monospace',
+                boxSizing: 'border-box',
+              }}
+            />
+            <p style={{ fontSize: '12px', color: '#856404', marginTop: '6px', marginBottom: 0 }}>
+              No receiving address is configured for this network, so the payment will be sent to the
+              address you enter here. Make sure it's valid for the selected network.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          marginTop: '20px',
           padding: '20px',
           backgroundColor: '#f8f9fa',
           borderRadius: '8px',

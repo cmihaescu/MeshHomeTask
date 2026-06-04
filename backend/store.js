@@ -11,7 +11,7 @@ class Store {
         id: 1,
         name: "Classic Running Shoes",
         category: "shoes",
-        price: 50.00,
+        price: 0.01,
         description: "Comfortable running shoes for daily training",
         image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
         stock: 25

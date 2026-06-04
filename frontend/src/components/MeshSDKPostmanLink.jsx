@@ -1,6 +1,7 @@
 import { createLink } from "@meshconnect/web-link-sdk";
 import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
+import { useMeshEnv } from '../contexts/MeshEnvContext';
 import { useNavigate } from 'react-router-dom';
 
 const MeshSDKPostmanLink = ({ orderComplete }) => {
@@ -8,13 +9,30 @@ const MeshSDKPostmanLink = ({ orderComplete }) => {
     const [meshLinkSDK, setMeshLinkSDK] = useState(null);
     const [linkToken, setLinkToken] = useState('');
     const { cartItems, getCartTotal, clearCart } = useCart();
+    const { iframeMode } = useMeshEnv();
     const navigate = useNavigate();
     const [error, setError] = useState(null);
     const [abortMessage, setAbortMessage] = useState(false);
+    // Stable id for the embedded iframe used when iframe mode is on
+    const iframeId = 'mesh-link-iframe-postman';
+    const BinanceAccessToken = import.meta.env.VITE_BINANCE_ACCESS_TOKEN
+    const LedgerAccessToken = import.meta.env.VITE_LEDGER_ACCESS_TOKEN
+
+   const accessTokens = [];
+    // const accessTokens = [
+    //     {
+    //       accessToken: BinanceAccessToken,
+    //       brokerType: "binanceInternationalDirect",
+    //       brokerName: 'Binance',
+    //       accountId: '',
+    //       accountName: ''
+    //     }
+    //   ]
 
     useEffect(() => {
         const link = createLink({
             clientId: import.meta.env.VITE_MESH_CLIENT_ID,
+            accessTokens: accessTokens,
             onEvent: (event) => {
                 console.log("event: ", event)
                 switch (event.type) {
@@ -79,7 +97,8 @@ const MeshSDKPostmanLink = ({ orderComplete }) => {
         try {
             setError(null);
             setIsLoading(true);
-            meshLinkSDK.openLink(linkToken.trim());
+            // Embed in our iframe when iframe mode is on, else open the popup
+            meshLinkSDK.openLink(linkToken.trim(), iframeMode ? iframeId : undefined);
         } catch (err) {
             console.error('Error opening link:', err);
             setError(err.message || 'Failed to open Mesh widget');
@@ -162,6 +181,23 @@ const MeshSDKPostmanLink = ({ orderComplete }) => {
                     }}>
                         <strong>Error:</strong> {error}
                     </div>
+                )}
+
+                {/* When iframe mode is on, the Mesh Link UI mounts here
+                    (passed to openLink as customIframeId) instead of a popup. */}
+                {iframeMode && (
+                    <iframe
+                        id={iframeId}
+                        title="Mesh Connect"
+                        style={{
+                            width: '100%',
+                            height: '600px',
+                            marginTop: '20px',
+                            border: '1px solid #ddd',
+                            borderRadius: '8px',
+                            backgroundColor: '#fff',
+                        }}
+                    />
                 )}
             </div>
         </div>

@@ -1,6 +1,7 @@
 import { createLink } from "@meshconnect/web-link-sdk";
 import { useState, useEffect, useRef } from 'react';
 import { useCart } from '../contexts/CartContext';
+import { useMeshEnv } from '../contexts/MeshEnvContext';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -9,17 +10,31 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [meshLinkSDK, setMeshLinkSDK] = useState(null);
   const { cartItems, getCartTotal, clearCart } = useCart();
+  const { meshEnv, iframeMode } = useMeshEnv();
   const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [abortMessage, setAbortMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0)
   const transferCompletedRef = useRef(false);
+  // Stable id for the embedded iframe (unique per transfer type on a page)
+  const iframeId = `mesh-link-iframe-${transferType || 'pay'}`;
+  
+  const accessTokens = [
+    {
+      accessToken: '',
+      brokerType: "binanceInternationalDirect",
+      brokerName: 'Binance',
+      accountId: '',
+      accountName: ''
+    }
+  ]
 
 
   useEffect(() => {
     const link = createLink({
       clientId: import.meta.env.VITE_MESH_CLIENT_ID,
+      accessTokens: [],
       onEvent: (event) => {
         console.log("event: ",event)
         switch (event.type) {
@@ -91,6 +106,14 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
         walletAddresses = await addressesResponse.json();
       }
 
+      // Network + token chosen on the cart page (if any)
+      let selection = {};
+      try {
+        selection = JSON.parse(localStorage.getItem('meshTransferSelection')) || {};
+      } catch {
+        selection = {};
+      }
+
       // Create payment link token
       const response = await fetch('/api/mesh/payment-link', {
         method: 'POST',
@@ -101,6 +124,12 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
           userId,
           amount: transferType === "payment" ? getCartTotal() : depositAmount,
           transferType,
+          env: meshEnv,
+          networkId: selection.networkId || undefined,
+          symbol: selection.symbol || undefined,
+          // Shopper-entered destination address (cart page) for networks with no
+          // configured receiving address; ignored by the backend when one exists.
+          address: selection.address || undefined,
           toAddresses: walletAddresses.length > 0 ? walletAddresses : undefined,
         }),
       });
@@ -116,8 +145,8 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
         throw new Error('No link token received from server');
       }
 
-      // Open Mesh widget with the link token
-      meshLinkSDK.openLink(data.linkToken);
+      // Open Mesh widget — embed in our iframe when iframe mode is on, else popup
+      meshLinkSDK.openLink(data.linkToken, iframeMode ? iframeId : undefined);
     } catch (err) {
       console.error(`Error initiating crypto ${transferType}:`, err);
       setError(err.message || `Failed to initiate ${transferType}`);
@@ -137,7 +166,7 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
             <span style={{ fontSize: '12px', marginTop: '5px', display: 'block' }}>
               {transferType === "payment" ?
                 <p>You can manage your wallet addresses in the{' '}
-                  <a href="/account" style={{ color: '#007bff', textDecoration: 'underline' }}>
+                  <a href="/account" style={{ color: '#00c281', textDecoration: 'underline' }}>
                     Account page
                   </a>.</p>
                 :
@@ -174,7 +203,9 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
         {isLoading ? `Generating ${transferType} Link...` : `Generate ${transferType} Link & Pay`}
       </button>
       <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-        You'll be redirected to Mesh Connect to complete your {transferType} securely.
+        {iframeMode
+          ? `Mesh Connect will load in the embedded frame below to complete your ${transferType} securely.`
+          : `You'll be redirected to Mesh Connect to complete your ${transferType} securely.`}
       </p>
       {abortMessage && (
         <div style={{
@@ -247,6 +278,23 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
         }}>
           <strong>Error:</strong> {error}
         </div>
+      )}
+
+      {/* When iframe mode is on, the Mesh Link UI is mounted into this element
+          (passed to openLink as customIframeId) instead of a popup overlay. */}
+      {iframeMode && (
+        <iframe
+          id={iframeId}
+          title={`Mesh Connect ${transferType}`}
+          style={{
+            width: '100%',
+            height: '600px',
+            marginTop: '20px',
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            backgroundColor: '#fff',
+          }}
+        />
       )}
     </div>
   )
