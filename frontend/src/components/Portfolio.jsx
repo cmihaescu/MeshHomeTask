@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import MeshSDK from './MeshSDK';
+import { useMeshEnv } from '../contexts/MeshEnvContext';
+
+// Safely format numeric fields — production portfolio positions may omit some.
+const fmt = (value, digits = 2) =>
+    Number.isFinite(value) ? value.toFixed(digits) : (0).toFixed(digits);
 
 const Portfolio = ({ userId }) => {
+
+    const { meshEnv } = useMeshEnv();
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -23,12 +30,12 @@ const Portfolio = ({ userId }) => {
         } else {
             setIsLoading(false);
         }
-    }, [userId]);
+    }, [userId, meshEnv]);
 
     const fetchPortfolio = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch(`/api/v1/holdings/portfolio/${userId}`);
+            const response = await fetch(`/api/v1/holdings/portfolio/${userId}?env=${meshEnv}`);
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -71,7 +78,7 @@ const Portfolio = ({ userId }) => {
                     disabled={isLoading}
                     style={{
                         padding: '8px 16px',
-                        backgroundColor: '#007bff',
+                        backgroundColor: '#00c281',
                         color: '#fff',
                         border: 'none',
                         borderRadius: '4px',
@@ -109,12 +116,12 @@ const Portfolio = ({ userId }) => {
                         }}>
                             <strong>{coin.name} ({coin.symbol})</strong>
                             <div>Amount: {coin.amount}</div>
-                            <div>Market Value: ${coin.marketValue.toFixed(2)}</div>
-                            <div>Cost Basis: ${coin.costBasis.toFixed(2)}</div>
-                            <div>Return: ${coin.totalReturn.toFixed(2)}</div>
-                            <div>Return %: {coin.returnPercentage.toFixed(2)}%</div>
-                            <div>Portfolio %: {coin.portfolioPercentage.toFixed(4)}%</div>
-                            <div>Last Price: ${coin.lastPrice.toFixed(4)}</div>
+                            <div>Market Value: ${fmt(coin.marketValue)}</div>
+                            <div>Cost Basis: ${fmt(coin.costBasis)}</div>
+                            <div>Return: ${fmt(coin.totalReturn)}</div>
+                            <div>Return %: {fmt(coin.returnPercentage)}%</div>
+                            <div>Portfolio %: {fmt(coin.portfolioPercentage, 4)}%</div>
+                            <div>Last Price: ${fmt(coin.lastPrice, 4)}</div>
                         </div>
                     ))}
                 </div>
@@ -123,7 +130,7 @@ const Portfolio = ({ userId }) => {
                     disabled={isLoading}
                     style={{
                         padding: '8px 16px',
-                        backgroundColor: '#007bff',
+                        backgroundColor: '#00c281',
                         color: '#fff',
                         border: 'none',
                         borderRadius: '4px',
