@@ -1,0 +1,66 @@
+# Render Blueprint — single web service (backend serves the built frontend).
+# Docs: https://render.com/docs/blueprint-spec
+#
+# After connecting this repo in Render (New → Blueprint), fill in the secret
+# values below in the dashboard. Vars with `sync: false` are NOT stored in git
+# and must be entered manually. VITE_* vars are baked into the frontend bundle
+# at build time, so they must be present when `npm run build` runs.
+services:
+  - type: web
+    name: mesh-home-task
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
+    startCommand: cd backend && npm start
+    healthCheckPath: /
+    envVars:
+      # Render injects PORT automatically; server.js reads process.env.PORT.
+
+      # --- Mesh runtime config (backend) ---
+      - key: MESH_ENV
+        value: sandbox            # set to "production" to use the prod API/secrets
+      - key: MESH_LINK_VERSION
+        value: v2                 # "v1" or "v2"
+      - key: MESH_API_URL_SANDBOX
+        value: https://sandbox-integration-api.meshconnect.com
+      - key: MESH_API_URL_PRODUCTION
+        value: https://integration-api.meshconnect.com
+
+      # --- Mesh client IDs (backend) ---
+      - key: MESH_CLIENT_ID
+        sync: false
+      - key: MESH_CLIENT_ID_V1
+        sync: false
+      - key: MESH_CLIENT_ID_V2
+        sync: false
+
+      # --- Mesh client secrets (backend) ---
+      - key: MESH_CLIENT_SECRET_SANDBOX
+        sync: false
+      - key: MESH_CLIENT_SECRET_SANDBOX_V1
+        sync: false
+      - key: MESH_CLIENT_SECRET_SANDBOX_V2
+        sync: false
+      - key: MESH_CLIENT_SECRET_PRODUCTION
+        sync: false
+      - key: MESH_CLIENT_SECRET_PRODUCTION_V1
+        sync: false
+      - key: MESH_CLIENT_SECRET_PRODUCTION_V2
+        sync: false
+
+      # --- Misc backend ---
+      - key: BINANCE_ACCESS_TOKEN
+        sync: false
+
+      # --- Frontend build-time vars (VITE_*, baked into the bundle) ---
+      - key: VITE_MESH_CLIENT_ID
+        sync: false
+      - key: VITE_MESH_CLIENT_ID_V1
+        sync: false
+      - key: VITE_MESH_CLIENT_ID_V2
+        sync: false
+      - key: VITE_BINANCE_ACCESS_TOKEN
+        sync: false
+      - key: VITE_LEDGER_ACCESS_TOKEN
+        sync: false

@@ -9,7 +9,7 @@ const MeshSDKPostmanLink = ({ orderComplete }) => {
     const [meshLinkSDK, setMeshLinkSDK] = useState(null);
     const [linkToken, setLinkToken] = useState('');
     const { cartItems, getCartTotal, clearCart } = useCart();
-    const { iframeMode } = useMeshEnv();
+    const { meshClientId, iframeMode, blockTopLevelLinks } = useMeshEnv();
     const navigate = useNavigate();
     const [error, setError] = useState(null);
     const [abortMessage, setAbortMessage] = useState(false);
@@ -31,8 +31,9 @@ const MeshSDKPostmanLink = ({ orderComplete }) => {
 
     useEffect(() => {
         const link = createLink({
-            clientId: import.meta.env.VITE_MESH_CLIENT_ID,
+            clientId: meshClientId,
             accessTokens: accessTokens,
+            language:"en-US",
             onEvent: (event) => {
                 console.log("event: ", event)
                 switch (event.type) {
@@ -81,7 +82,7 @@ const MeshSDKPostmanLink = ({ orderComplete }) => {
             }
         });
         setMeshLinkSDK(link);
-    }, [cartItems, navigate, orderComplete]);
+    }, [cartItems, navigate, orderComplete, meshClientId]);
 
     const handleManualLinkPayment = async () => {
         if (!linkToken.trim()) {
@@ -189,6 +190,10 @@ const MeshSDKPostmanLink = ({ orderComplete }) => {
                     <iframe
                         id={iframeId}
                         title="Mesh Connect"
+                        // When "block top-level links" is on, sandbox the frame: allow the
+                        // SDK to run (scripts/forms/same-origin) but withhold allow-popups
+                        // and allow-top-navigation so it can't open new tabs or redirect us.
+                        sandbox={blockTopLevelLinks ? 'allow-scripts allow-same-origin allow-forms' : undefined}
                         style={{
                             width: '100%',
                             height: '600px',
