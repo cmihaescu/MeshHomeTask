@@ -10,7 +10,7 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [meshLinkSDK, setMeshLinkSDK] = useState(null);
   const { cartItems, getCartTotal, clearCart } = useCart();
-  const { meshEnv, iframeMode } = useMeshEnv();
+  const { meshEnv, linkVersion, meshClientId, iframeMode, blockTopLevelLinks } = useMeshEnv();
   const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [abortMessage, setAbortMessage] = useState(false);
@@ -33,8 +33,9 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
 
   useEffect(() => {
     const link = createLink({
-      clientId: import.meta.env.VITE_MESH_CLIENT_ID,
+      clientId: meshClientId,
       accessTokens: [],
+      language:"en-US",
       onEvent: (event) => {
         console.log("event: ",event)
         switch (event.type) {
@@ -86,7 +87,7 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
       }
     });
     setMeshLinkSDK(link);
-  }, [cartItems, navigate, orderComplete]);
+  }, [cartItems, navigate, orderComplete, meshClientId]);
 
 
   const handleCryptoPayment = async () => {
@@ -125,6 +126,7 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
           amount: transferType === "payment" ? getCartTotal() : depositAmount,
           transferType,
           env: meshEnv,
+          linkVersion,
           networkId: selection.networkId || undefined,
           symbol: selection.symbol || undefined,
           // Shopper-entered destination address (cart page) for networks with no
@@ -286,6 +288,10 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
         <iframe
           id={iframeId}
           title={`Mesh Connect ${transferType}`}
+          // When "block top-level links" is on, sandbox the frame: allow the
+          // SDK to run (scripts/forms/same-origin) but withhold allow-popups
+          // and allow-top-navigation so it can't open new tabs or redirect us.
+          sandbox={blockTopLevelLinks ? 'allow-scripts allow-same-origin allow-forms' : undefined}
           style={{
             width: '100%',
             height: '600px',

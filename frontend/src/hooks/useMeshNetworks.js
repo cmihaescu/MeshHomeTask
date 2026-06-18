@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useMeshEnv } from '../contexts/MeshEnvContext';
 
-// Cache key is per-env, since the supported networks can differ between
-// sandbox and production.
-const cacheKey = (env) => `meshNetworks:${env}`;
+// Cache key is per-env and per-Link-version, since the supported networks can
+// differ between sandbox/production and between Link accounts.
+const cacheKey = (env, linkVersion) => `meshNetworks:${env}:${linkVersion}`;
 
 /**
  * Fetches the Mesh supported-networks list once and caches it in localStorage.
@@ -11,13 +11,13 @@ const cacheKey = (env) => `meshNetworks:${env}`;
  * the cache for the active env is empty (or a forced refresh is requested).
  */
 export const useMeshNetworks = () => {
-  const { meshEnv } = useMeshEnv();
+  const { meshEnv, linkVersion } = useMeshEnv();
   const [networks, setNetworks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const load = useCallback(async ({ force = false } = {}) => {
-    const key = cacheKey(meshEnv);
+    const key = cacheKey(meshEnv, linkVersion);
 
     // Use the cached copy unless a refresh was explicitly requested.
     if (!force) {
@@ -35,7 +35,7 @@ export const useMeshNetworks = () => {
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/mesh/networks?env=${meshEnv}`);
+      const res = await fetch(`/api/mesh/networks?env=${meshEnv}&linkVersion=${linkVersion}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.details || err.error || 'Failed to fetch networks');
@@ -51,7 +51,7 @@ export const useMeshNetworks = () => {
     } finally {
       setLoading(false);
     }
-  }, [meshEnv]);
+  }, [meshEnv, linkVersion]);
 
   // Runs on mount and whenever the env changes; only fetches when uncached.
   useEffect(() => {

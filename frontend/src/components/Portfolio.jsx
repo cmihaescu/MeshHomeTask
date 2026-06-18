@@ -8,7 +8,7 @@ const fmt = (value, digits = 2) =>
 
 const Portfolio = ({ userId }) => {
 
-    const { meshEnv } = useMeshEnv();
+    const { meshEnv, linkVersion } = useMeshEnv();
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -30,12 +30,12 @@ const Portfolio = ({ userId }) => {
         } else {
             setIsLoading(false);
         }
-    }, [userId, meshEnv]);
+    }, [userId, meshEnv, linkVersion]);
 
     const fetchPortfolio = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch(`/api/v1/holdings/portfolio/${userId}?env=${meshEnv}`);
+            const response = await fetch(`/api/v1/holdings/portfolio/${userId}?env=${meshEnv}&linkVersion=${linkVersion}`);
 
             if (!response.ok) {
                 const errorData = await response.json();
