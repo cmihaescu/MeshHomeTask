@@ -17,6 +17,7 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.vercel
 SECRETS_TO_MIGRATE.env
 
 # Logs
