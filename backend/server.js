@@ -500,17 +500,23 @@ if (fs.existsSync(frontendDist)) {
   app.get('*', (req, res) => res.sendFile(path.join(frontendDist, 'index.html')));
 }
 
-// Start server
-app.listen(PORT, () => {
-  const configured = (cfg) => !!(cfg.clientId && cfg.clientSecret && cfg.apiUrl);
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Default Mesh environment: ${DEFAULT_MESH_ENV}`);
-  console.log(`Default Link version: ${DEFAULT_LINK_VERSION}`);
-  for (const version of ['v1', 'v2']) {
-    console.log(`Mesh sandbox configured (Link ${version}): ${configured(resolveMeshConfig('sandbox', version))}`);
-    console.log(`Mesh production configured (Link ${version}): ${configured(resolveMeshConfig('production', version))}`);
-  }
-  console.log(`\nTo receive webhooks from Mesh Connect, expose this server with ngrok:`);
-  console.log(`  ngrok http ${PORT}`);
-  console.log(`Then register the ngrok URL as: https://<your-id>.ngrok-free.app/webhook`);
-});
+// Start server only when this file is run directly (node server.js).
+// On Vercel the app is imported by api/index.js and run as a serverless
+// function, so no listener must be started there.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    const configured = (cfg) => !!(cfg.clientId && cfg.clientSecret && cfg.apiUrl);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Default Mesh environment: ${DEFAULT_MESH_ENV}`);
+    console.log(`Default Link version: ${DEFAULT_LINK_VERSION}`);
+    for (const version of ['v1', 'v2']) {
+      console.log(`Mesh sandbox configured (Link ${version}): ${configured(resolveMeshConfig('sandbox', version))}`);
+      console.log(`Mesh production configured (Link ${version}): ${configured(resolveMeshConfig('production', version))}`);
+    }
+    console.log(`\nTo receive webhooks from Mesh Connect, expose this server with ngrok:`);
+    console.log(`  ngrok http ${PORT}`);
+    console.log(`Then register the ngrok URL as: https://<your-id>.ngrok-free.app/webhook`);
+  });
+}
+
+module.exports = app;

@@ -1,6 +1,7 @@
 import React from 'react';
 import NetworkTokenSelector from './NetworkTokenSelector';
 import { useNetworkAddress } from '../hooks/useNetworkAddress';
+import { Field } from './ui/Field';
 
 /**
  * One network + token combo row: the dependent dropdowns plus, when the
@@ -29,57 +30,45 @@ const TransferSelectionRow = ({ value, onChange, onRemove }) => {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
         <div style={{ flex: 1 }}>
           <NetworkTokenSelector value={value} onChange={handleSelectionChange} />
         </div>
-        {onRemove && (
+        {onRemove ? (
           <button
+            type="button"
+            className="icon-btn"
             onClick={onRemove}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#dc3545',
-              cursor: 'pointer',
-              fontSize: '20px',
-              height: '38px',
-            }}
+            aria-label="Remove this network and token"
             title="Remove this network & token"
           >
             ×
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* Shown only when the selected network/token has no merchant address
           configured on the backend — the shopper must supply a destination
           address that's valid for the chosen chain. */}
-      {needsAddress && (
-        <div style={{ marginTop: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '13px' }}>
-            Destination address
-          </label>
-          <input
-            type="text"
-            value={value.address || ''}
-            onChange={handleAddressChange}
-            placeholder="Enter the receiving address for this network"
-            style={{
-              width: '100%',
-              padding: '10px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '6px',
-              fontFamily: 'monospace',
-              boxSizing: 'border-box',
-            }}
-          />
-          <p style={{ fontSize: '12px', color: '#856404', marginTop: '6px', marginBottom: 0 }}>
-            No receiving address is configured for this network, so the payment will be sent to the
-            address you enter here. Make sure it's valid for the selected network.
-          </p>
+      {needsAddress ? (
+        <div style={{ marginTop: '1rem' }}>
+          <Field
+            label="Destination address"
+            hint="No receiving address is configured for this network, so the payment will be sent to the address you enter here. Make sure it's valid for the selected network."
+          >
+            <input
+              type="text"
+              name="destination-address"
+              autoComplete="off"
+              spellCheck={false}
+              className="input--mono"
+              value={value.address || ''}
+              onChange={handleAddressChange}
+              placeholder="e.g. 0x6A36…3266"
+            />
+          </Field>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

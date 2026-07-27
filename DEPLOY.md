@@ -1,6 +1,30 @@
 # Deploy this app for free
 
-You can host the full app (frontend + backend) on a **single free URL** using [Render](https://render.com).
+You can host the full app (frontend + backend) on a **single free URL** using [Vercel](https://vercel.com) or [Render](https://render.com).
+
+## Option 0: Single project on Vercel (one URL)
+
+The repo is pre-configured for Vercel: `vercel.json` builds the Vite frontend as static output and runs the Express backend as a serverless function (`api/index.js`). All `/api/*` and `/webhook*` requests hit the backend; everything else serves the React app.
+
+1. **Push your code to GitHub** (if not already).
+
+2. Go to [vercel.com/new](https://vercel.com/new), import the repo.
+   - **Framework Preset:** Other (auto-detected from `vercel.json`).
+   - **Root Directory:** leave as repo root.
+   - Build command / output directory are already set by `vercel.json` — don't override them.
+
+3. **Environment variables** (Project → Settings → Environment Variables) — same set as the Render blueprint:
+   - Backend: `MESH_ENV`, `MESH_LINK_VERSION`, `MESH_API_URL_SANDBOX`, `MESH_API_URL_PRODUCTION`, `MESH_CLIENT_ID` (+ `_V1`/`_V2`), `MESH_CLIENT_SECRET_SANDBOX` / `MESH_CLIENT_SECRET_PRODUCTION` (+ `_V1`/`_V2`), `BINANCE_ACCESS_TOKEN`.
+   - Frontend (baked in at build time): `VITE_MESH_CLIENT_ID` (+ `_V1`/`_V2`), `VITE_BINANCE_ACCESS_TOKEN`, `VITE_LEDGER_ACCESS_TOKEN`.
+   - After adding/changing `VITE_*` vars you must **redeploy** for them to take effect.
+
+4. **Deploy.** You get one URL, e.g. `https://your-app.vercel.app`. Register `https://your-app.vercel.app/webhook` in the Mesh dashboard as the webhook endpoint, and whitelist the domain in Mesh to avoid CSP errors.
+
+Alternatively from the CLI: `npm i -g vercel && vercel` (then `vercel --prod`).
+
+**Serverless caveat:** the backend's in-memory store (orders, stored Mesh tokens, wallet addresses) does not persist between serverless invocations on Vercel — each request may hit a fresh instance. Fine for demoing the payment flow; if you need the stored data to survive, use Render (Option A below) or move the store to a database.
+
+---
 
 ## Option A: Single service on Render (one URL, recommended)
 
