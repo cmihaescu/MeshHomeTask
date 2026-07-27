@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
+import { Button } from './ui/Button';
+import { Notice } from './ui/Notice';
+
+// The catalog serves Unsplash URLs sized w=400; request a sharper cut for
+// modern screens. Falls back to the original URL untouched on any surprise.
+const productImage = (url) =>
+  typeof url === 'string' ? url.replace('w=400', 'w=800&q=80') : url;
 
 const Shop = () => {
   const [products, setProducts] = useState([]);
@@ -18,7 +25,7 @@ const Shop = () => {
       const data = await response.json();
       setProducts(data);
       const initialQuantities = {};
-      data.forEach(product => {
+      data.forEach((product) => {
         initialQuantities[product.id] = 1;
       });
       setQuantities(initialQuantities);
@@ -32,10 +39,7 @@ const Shop = () => {
   const handleQuantityChange = (productId, value) => {
     const quantity = parseInt(value);
     if (quantity > 0) {
-      setQuantities({
-        ...quantities,
-        [productId]: quantity,
-      });
+      setQuantities((prev) => ({ ...prev, [productId]: quantity }));
     }
   };
 
@@ -49,67 +53,89 @@ const Shop = () => {
     }
 
     addToCart(product, quantity);
-    setMessage({ type: 'success', text: `Added ${quantity} ${product.name} to cart!` });
+    setMessage({ type: 'success', text: `Added ${quantity} × ${product.name} to your cart` });
     setTimeout(() => setMessage({ type: '', text: '' }), 3000);
 
-    // Reset quantity to 1
-    setQuantities({
-      ...quantities,
-      [product.id]: 1,
-    });
+    setQuantities((prev) => ({ ...prev, [product.id]: 1 }));
   };
 
-  if (loading) {
-    return <div className="loading">Loading products...</div>;
-  }
-
   return (
-    <div className="container">
-      <div className="products-header">
-        <h2>Shop - Shoes & Clothing</h2>
-      </div>
-      {message.text && (
-        <div className={message.type === 'success' ? 'success' : 'error'}>
-          {message.text}
-        </div>
-      )}
-      <div className="products-grid">
-        {products.map((product) => (
-          <div key={product.id} className="product-card">
-            <img src={product.image} alt={product.name} className="product-image" />
-            <div className="product-info">
-              <div className="product-category">{product.category}</div>
-              <h3 className="product-name">{product.name}</h3>
-              <p className="product-description">{product.description}</p>
-              <div className="product-footer">
-                <div>
-                  <div className="product-price">${product.price}</div>
-                  <div className="product-stock">Stock: {product.stock}</div>
-                </div>
-              </div>
-              <div className="purchase-section">
-                <input
-                  type="number"
-                  min="1"
-                  max={product.stock}
-                  value={quantities[product.id] || 1}
-                  onChange={(e) => handleQuantityChange(product.id, e.target.value)}
-                  className="quantity-input"
-                  disabled={product.stock === 0}
-                />
-                <button
-                  onClick={() => handleAddToCart(product)}
-                  className="btn btn-primary"
-                  disabled={product.stock === 0}
-                >
-                  {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                </button>
-              </div>
-            </div>
+    <>
+      <section className="hero">
+        <div className="hero__inner">
+          <p className="eyebrow">Shoes &amp; clothing · settled on-chain</p>
+          <h1>
+            Dress sharp.
+            <br />
+            Pay in <em>crypto</em>.
+          </h1>
+          <p className="hero__sub">
+            Ten staples, one checkout. Connect an exchange or wallet with Mesh
+            and settle the whole basket in the token of your choice.
+          </p>
+          <div className="hero__meta">
+            <span><span className="tick">✓</span> USDC · ETH · and more</span>
+            <span><span className="tick">✓</span> Exchange or self-custody wallet</span>
+            <span><span className="tick">✓</span> Real-time portfolio after purchase</span>
           </div>
-        ))}
+        </div>
+      </section>
+
+      <div className="container">
+        <div aria-live="polite">
+          {message.text ? (
+            <Notice tone={message.type === 'success' ? 'success' : 'danger'}>
+              {message.text}
+            </Notice>
+          ) : null}
+        </div>
+
+        {loading ? (
+          <p className="loading">Loading the rack…</p>
+        ) : (
+          <ul className="products-grid">
+            {products.map((product) => (
+              <li key={product.id} className="product-card">
+                <div className="product-card__media">
+                  <img src={productImage(product.image)} alt={product.name} loading="lazy" />
+                </div>
+                <div className="product-card__body">
+                  <p className="eyebrow">{product.category}</p>
+                  <h3 className="product-card__name">{product.name}</h3>
+                  <p className="product-card__desc">{product.description}</p>
+                  <div className="product-card__price-row">
+                    <span className="price">${product.price}</span>
+                    <span className={product.stock === 0 ? 'stock-note stock-note--out' : 'stock-note'}>
+                      {product.stock === 0 ? 'sold out' : `${product.stock} in stock`}
+                    </span>
+                  </div>
+                  <div className="product-card__actions">
+                    <label className="sr-only" htmlFor={`qty-${product.id}`}>
+                      Quantity for {product.name}
+                    </label>
+                    <input
+                      id={`qty-${product.id}`}
+                      name={`qty-${product.id}`}
+                      autoComplete="off"
+                      className="qty"
+                      type="number"
+                      min="1"
+                      max={product.stock}
+                      value={quantities[product.id] || 1}
+                      onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                      disabled={product.stock === 0}
+                    />
+                    <Button onClick={() => handleAddToCart(product)} disabled={product.stock === 0}>
+                      {product.stock === 0 ? 'Out of stock' : 'Add to cart'}
+                    </Button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-    </div>
+    </>
   );
 };
 

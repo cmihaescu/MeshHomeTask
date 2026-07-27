@@ -1,12 +1,13 @@
-import { createLink } from "@meshconnect/web-link-sdk";
+import { createLink } from '@meshconnect/web-link-sdk';
 import { useState, useEffect, useRef } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useMeshEnv } from '../contexts/MeshEnvContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { Button } from './ui/Button';
+import { Notice } from './ui/Notice';
+import { Field } from './ui/Field';
 
-
-
-const MeshSDK = ({ userId, orderComplete, transferType }) => {
+const MeshSDK = ({ userId, transferType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [meshLinkSDK, setMeshLinkSDK] = useState(null);
   const { cartItems, getCartTotal, clearCart } = useCart();
@@ -15,80 +16,70 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
   const [error, setError] = useState(null);
   const [abortMessage, setAbortMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
-  const [depositAmount, setDepositAmount] = useState(0)
+  const [depositAmount, setDepositAmount] = useState(0);
   const transferCompletedRef = useRef(false);
   // Stable id for the embedded iframe (unique per transfer type on a page)
   const iframeId = `mesh-link-iframe-${transferType || 'pay'}`;
-  
-  const accessTokens = [
-    {
-      accessToken: '',
-      brokerType: "binanceInternationalDirect",
-      brokerName: 'Binance',
-      accountId: '',
-      accountName: ''
-    }
-  ]
-
 
   useEffect(() => {
     const link = createLink({
       clientId: meshClientId,
       accessTokens: [],
-      language:"en-US",
+      language: 'en-US',
       onEvent: (event) => {
-        console.log("event: ",event)
+        console.log('event: ', event);
         switch (event.type) {
           case 'pageLoaded':
-            console.log("onEvent pageLoaded fired: ", event)
-            setAbortMessage(false)
-            setSuccessMessage(false)
-          break
+            console.log('onEvent pageLoaded fired: ', event);
+            setAbortMessage(false);
+            setSuccessMessage(false);
+            break;
           case 'close':
-            console.log("onEvent close fired: ", event)
-          break
+            console.log('onEvent close fired: ', event);
+            break;
           default:
-            console.log("Unmapped/Unknown event type")
+            console.log('Unmapped/Unknown event type');
             break;
         }
       },
       onIntegrationConnected: (payload) => {
-        console.log("Connected!", payload);
-        const { accessToken } = payload.accessToken.accountTokens[0]
-        const { refreshToken } = payload.accessToken.accountTokens[0]
+        console.log('Connected!', payload);
+        const { accessToken } = payload.accessToken.accountTokens[0];
+        const { refreshToken } = payload.accessToken.accountTokens[0];
         // Store Mesh tokens if present
-        console.log('accessToken & refreshToken ', accessToken, refreshToken)
-        if (accessToken
-          && refreshToken
-          && !localStorage.getItem('meshAccessToken')
-          && !localStorage.getItem('meshRefreshToken')) {
+        console.log('accessToken & refreshToken ', accessToken, refreshToken);
+        if (
+          accessToken &&
+          refreshToken &&
+          !localStorage.getItem('meshAccessToken') &&
+          !localStorage.getItem('meshRefreshToken')
+        ) {
           localStorage.setItem('meshAccessToken', accessToken);
           localStorage.setItem('meshRefreshToken', refreshToken);
         }
       },
       onExit: (error) => {
-        console.log("Exit. transferCompletedRef =", transferCompletedRef.current);
+        console.log('Exit. transferCompletedRef =', transferCompletedRef.current);
         if (error) {
-          console.error("User closed or error:", error);
+          console.error('User closed or error:', error);
           setError(error.message || `${transferType} connection failed`);
         } else if (!transferCompletedRef.current) {
-          console.log("onExit closed the widget");
+          console.log('onExit closed the widget');
           setAbortMessage(true);
         }
         setIsLoading(false);
       },
       onTransferFinished: (payload) => {
-        console.log("Transfer result:", payload);
-        setSuccessMessage(true)
-        setIsLoading(false)
+        console.log('Transfer result:', payload);
+        setSuccessMessage(true);
+        setIsLoading(false);
         transferCompletedRef.current = true;
-        navigate(`/confirmation`)
-        clearCart()
-      }
+        navigate(`/confirmation`);
+        clearCart();
+      },
     });
     setMeshLinkSDK(link);
-  }, [cartItems, navigate, orderComplete, meshClientId]);
-
+  }, [cartItems, navigate, meshClientId]);
 
   const handleCryptoPayment = async () => {
     if (!meshLinkSDK) {
@@ -123,7 +114,7 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
         },
         body: JSON.stringify({
           userId,
-          amount: transferType === "payment" ? getCartTotal() : depositAmount,
+          amount: transferType === 'payment' ? getCartTotal() : depositAmount,
           transferType,
           env: meshEnv,
           linkVersion,
@@ -156,154 +147,82 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
     }
   };
 
+  const isDeposit = transferType !== 'payment';
 
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', backgroundColor: '#f8f9fa' }}>
-      <h4 style={{ marginTop: 0 }}>Crypto {transferType} via Mesh Connect</h4>
-      <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
-        Click the button below to generate a {transferType} link and connect your crypto wallet.
-        {userId && (
-          <>
-            <br />
-            <span style={{ fontSize: '12px', marginTop: '5px', display: 'block' }}>
-              {transferType === "payment" ?
-                <p>You can manage your wallet addresses in the{' '}
-                  <a href="/account" style={{ color: '#00c281', textDecoration: 'underline' }}>
-                    Account page
-                  </a>.</p>
-                :
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                    Deposit amount in USDC:
-                  </label>
-                  <input
-                    type="text"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    placeholder="Input deposit value here"
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      fontSize: '14px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontFamily: 'monospace',
-                    }}
-                  />
-                </div>
-              }
-            </span>
-          </>
-        )}
+    <section className="panel" aria-label={`Crypto ${transferType} via Mesh Connect`}>
+      <h3 className="panel__title">Crypto {transferType} via Mesh Connect</h3>
+      <p className="panel__sub">
+        Generate a {transferType} link and connect your exchange or wallet.
       </p>
-      <button
-        onClick={handleCryptoPayment}
-        disabled={isLoading}
-        className="btn btn-primary"
-        style={{ width: '100%' }}
-      >
-        {isLoading ? `Generating ${transferType} Link...` : `Generate ${transferType} Link & Pay`}
-      </button>
-      <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+
+      {userId && isDeposit ? (
+        <div style={{ marginBottom: '1rem' }}>
+          <Field label="Deposit amount in USDC">
+            <input
+              type="text"
+              inputMode="decimal"
+              name="deposit-amount"
+              autoComplete="off"
+              spellCheck={false}
+              className="input--mono"
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              placeholder="e.g. 25.00"
+            />
+          </Field>
+        </div>
+      ) : null}
+      {userId && !isDeposit ? (
+        <p className="panel__sub">
+          You can manage your wallet addresses on the <Link to="/account">Account page</Link>.
+        </p>
+      ) : null}
+
+      <Button block onClick={handleCryptoPayment} disabled={isLoading}>
+        {isLoading ? `Generating ${transferType} link…` : `Generate ${transferType} link & pay`}
+      </Button>
+      <p className="panel__sub" style={{ marginTop: '0.7rem', marginBottom: 0 }}>
         {iframeMode
           ? `Mesh Connect will load in the embedded frame below to complete your ${transferType} securely.`
-          : `You'll be redirected to Mesh Connect to complete your ${transferType} securely.`}
+          : `Mesh Connect will open in a secure window to complete your ${transferType}.`}
       </p>
-      {abortMessage && (
-        <div style={{
-          marginTop: '20px',
-          padding: '15px',
-          backgroundColor: '#ff6b6b',
-          color: 'white',
-          borderRadius: '4px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <span>You aborted mission, the transfer was not performed, please try again.</span>
-          <button
-            onClick={() => setAbortMessage(false)}
-            style={{
-              backgroundColor: 'transparent',
-              border: 'none',
-              color: 'white',
-              fontSize: '20px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              padding: '0 8px',
-              marginLeft: '15px',
-            }}
-          >
-            ×
-          </button>
-        </div>
-      )}
 
-      {successMessage && (
-        <div style={{
-          marginTop: '20px',
-          padding: '15px',
-          backgroundColor: '#047c00ff',
-          color: 'white',
-          borderRadius: '4px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <span>{`Your ${transferType} was successfull!`}</span>
-          <button
-            onClick={() => setSuccessMessage(false)}
-            style={{
-              backgroundColor: 'transparent',
-              border: 'none',
-              color: 'white',
-              fontSize: '20px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              padding: '0 8px',
-              marginLeft: '15px',
-            }}
-          >
-            ×
-          </button>
-        </div>
-      )}
+      <div aria-live="polite">
+        {abortMessage ? (
+          <Notice tone="warning" onDismiss={() => setAbortMessage(false)}>
+            The transfer was not performed — you closed the widget before finishing. Please try again.
+          </Notice>
+        ) : null}
 
-      {error && (
-        <div style={{
-          marginTop: '20px',
-          padding: '12px',
-          backgroundColor: '#f8d7da',
-          color: '#721c24',
-          border: '1px solid #f5c6cb',
-          borderRadius: '4px',
-        }}>
-          <strong>Error:</strong> {error}
-        </div>
-      )}
+        {successMessage ? (
+          <Notice tone="success" onDismiss={() => setSuccessMessage(false)}>
+            Your {transferType} was successful!
+          </Notice>
+        ) : null}
+
+        {error ? (
+          <Notice tone="danger">
+            <strong>Error:</strong> {error}
+          </Notice>
+        ) : null}
+      </div>
 
       {/* When iframe mode is on, the Mesh Link UI is mounted into this element
           (passed to openLink as customIframeId) instead of a popup overlay. */}
-      {iframeMode && (
+      {iframeMode ? (
         <iframe
           id={iframeId}
           title={`Mesh Connect ${transferType}`}
+          className="mesh-frame"
           // When "block top-level links" is on, sandbox the frame: allow the
           // SDK to run (scripts/forms/same-origin) but withhold allow-popups
           // and allow-top-navigation so it can't open new tabs or redirect us.
           sandbox={blockTopLevelLinks ? 'allow-scripts allow-same-origin allow-forms' : undefined}
-          style={{
-            width: '100%',
-            height: '600px',
-            marginTop: '20px',
-            border: '1px solid #ddd',
-            borderRadius: '8px',
-            backgroundColor: '#fff',
-          }}
         />
-      )}
-    </div>
-  )
-}
+      ) : null}
+    </section>
+  );
+};
 
-export default MeshSDK
+export default MeshSDK;

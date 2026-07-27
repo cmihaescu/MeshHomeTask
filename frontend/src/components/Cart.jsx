@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import NetworkTokenSelector from './NetworkTokenSelector';
 import { useNetworkAddress } from '../hooks/useNetworkAddress';
+import { Button, ButtonLink } from './ui/Button';
+import { Field } from './ui/Field';
+import { Receipt } from './ui/Receipt';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -51,14 +54,12 @@ const Cart = () => {
   if (cartItems.length === 0) {
     return (
       <div className="container">
-        <h2>Shopping Cart</h2>
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <p style={{ fontSize: '18px', color: '#666', marginBottom: '20px' }}>
-            Your cart is empty
-          </p>
-          <Link to="/" className="btn btn-primary">
-            Continue Shopping
-          </Link>
+        <div className="page-head">
+          <h1>Your cart</h1>
+        </div>
+        <div className="empty-state">
+          <p>Nothing in the basket yet.</p>
+          <ButtonLink to="/">Browse the shop</ButtonLink>
         </div>
       </div>
     );
@@ -66,162 +67,111 @@ const Cart = () => {
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2>Shopping Cart</h2>
-        <button onClick={clearCart} className="btn btn-secondary">
-          Clear Cart
-        </button>
+      <div className="page-head">
+        <h1>Your cart</h1>
+        <Button variant="ghost" onClick={clearCart}>
+          Clear cart
+        </Button>
       </div>
 
-      <div style={{ display: 'grid', gap: '20px' }}>
+      <ul className="cart-list">
         {cartItems.map((item) => (
-          <div
-            key={item.id}
-            style={{
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              padding: '20px',
-              display: 'flex',
-              gap: '20px',
-              backgroundColor: '#fff',
-            }}
-          >
-            <img
-              src={item.image}
-              alt={item.name}
-              style={{
-                width: '120px',
-                height: '120px',
-                objectFit: 'cover',
-                borderRadius: '8px',
-              }}
-            />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <li key={item.id} className="cart-item">
+            <img src={item.image} alt={item.name} className="cart-item__img" />
+            <div className="cart-item__body">
+              <div className="cart-item__top">
                 <div>
-                  <div style={{ fontSize: '12px', color: '#666', textTransform: 'uppercase' }}>
-                    {item.category}
-                  </div>
-                  <h3 style={{ margin: '5px 0', fontSize: '18px' }}>{item.name}</h3>
-                  <p style={{ color: '#666', fontSize: '14px', margin: '5px 0' }}>
-                    {item.description}
-                  </p>
+                  <p className="eyebrow">{item.category}</p>
+                  <h3 className="cart-item__name">{item.name}</h3>
+                  <p className="cart-item__desc">{item.description}</p>
                 </div>
                 <button
+                  type="button"
+                  className="icon-btn"
                   onClick={() => removeFromCart(item.id)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#dc3545',
-                    cursor: 'pointer',
-                    fontSize: '20px',
-                    height: '30px',
-                  }}
-                  title="Remove from cart"
+                  aria-label={`Remove ${item.name} from cart`}
                 >
                   ×
                 </button>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Quantity:</label>
+              <div className="cart-item__bottom">
+                <div className="cart-item__qty">
+                  <label className="field__label" htmlFor={`cart-qty-${item.id}`}>
+                    Qty
+                  </label>
                   <input
+                    id={`cart-qty-${item.id}`}
+                    name={`cart-qty-${item.id}`}
+                    autoComplete="off"
                     type="number"
                     min="1"
                     max={item.stock}
                     value={item.quantity}
                     onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
-                    className="quantity-input"
-                    style={{ width: '80px' }}
                   />
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '14px', color: '#666' }}>
-                    ${item.price.toFixed(2)} each
-                  </div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28a745' }}>
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </div>
+                <div>
+                  <div className="cart-item__unit">${item.price.toFixed(2)} each</div>
+                  <div className="cart-item__line-total">${(item.price * item.quantity).toFixed(2)}</div>
                 </div>
               </div>
             </div>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
 
       {/* Transfer network + token selection (populated from the cached Mesh networks list) */}
-      <div
-        style={{
-          marginTop: '30px',
-          padding: '20px',
-          border: '1px solid #ddd',
-          backgroundColor: '#fff',
-          borderRadius: '8px',
-        }}
-      >
-        <h3 style={{ marginTop: 0, marginBottom: '5px', fontSize: '16px' }}>Payment network &amp; token</h3>
-        <p style={{ fontSize: '13px', color: '#666', marginTop: 0, marginBottom: '15px' }}>
-          Choose the network and crypto token you'll use to pay at checkout.
+      <section className="panel" aria-label="Payment network and token">
+        <h2 className="panel__title">Payment network &amp; token</h2>
+        <p className="panel__sub">
+          Choose the network and crypto token you&rsquo;ll use to pay at checkout.
         </p>
         <NetworkTokenSelector value={transferSelection} onChange={handleSelectionChange} />
 
         {/* Shown only when the selected network/token has no merchant address
             configured on the backend — the shopper must supply a destination
             address that's valid for the chosen chain. */}
-        {needsAddress && (
-          <div style={{ marginTop: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '13px' }}>
-              Destination address
-            </label>
-            <input
-              type="text"
-              value={transferSelection.address || ''}
-              onChange={handleAddressChange}
-              placeholder="Enter the receiving address for this network"
-              style={{
-                width: '100%',
-                padding: '10px',
-                fontSize: '14px',
-                border: '1px solid #ccc',
-                borderRadius: '6px',
-                fontFamily: 'monospace',
-                boxSizing: 'border-box',
-              }}
-            />
-            <p style={{ fontSize: '12px', color: '#856404', marginTop: '6px', marginBottom: 0 }}>
-              No receiving address is configured for this network, so the payment will be sent to the
-              address you enter here. Make sure it's valid for the selected network.
-            </p>
+        {needsAddress ? (
+          <div style={{ marginTop: '1rem' }}>
+            <Field
+              label="Destination address"
+              hint="No receiving address is configured for this network, so the payment will be sent to the address you enter here. Make sure it's valid for the selected network."
+            >
+              <input
+                type="text"
+                name="destination-address"
+                autoComplete="off"
+                spellCheck={false}
+                className="input--mono"
+                value={transferSelection.address || ''}
+                onChange={handleAddressChange}
+                placeholder="e.g. 0x6A36…3266"
+              />
+            </Field>
           </div>
-        )}
-      </div>
+        ) : null}
+      </section>
 
-      <div
-        style={{
-          marginTop: '20px',
-          padding: '20px',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '8px',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
-              Total: ${getCartTotal().toFixed(2)}
-            </div>
-            <div style={{ fontSize: '14px', color: '#666', marginTop: '5px' }}>
-              {cartItems.length} item(s) in cart
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <Link to="/" className="btn btn-secondary">
-              Continue Shopping
-            </Link>
-            <button onClick={handleCheckout} className="btn btn-primary">
-              Proceed to Checkout
-            </button>
-          </div>
-        </div>
+      <Receipt title="Cart summary">
+        {cartItems.map((item) => (
+          <Receipt.Row
+            key={item.id}
+            label={`${item.name} × ${item.quantity}`}
+            value={`$${(item.price * item.quantity).toFixed(2)}`}
+          />
+        ))}
+        <Receipt.Divider />
+        <Receipt.Total value={`$${getCartTotal().toFixed(2)}`} />
+        <Receipt.Note>
+          {cartItems.length} {cartItems.length === 1 ? 'line item' : 'line items'} · settled in crypto via Mesh
+        </Receipt.Note>
+      </Receipt>
+
+      <div className="confirm-actions" style={{ justifyContent: 'flex-end' }}>
+        <ButtonLink to="/" variant="secondary">
+          Continue shopping
+        </ButtonLink>
+        <Button onClick={handleCheckout}>Proceed to checkout</Button>
       </div>
     </div>
   );

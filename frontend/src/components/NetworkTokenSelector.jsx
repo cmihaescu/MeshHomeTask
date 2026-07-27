@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { useMeshNetworks } from '../hooks/useMeshNetworks';
+import { Field } from './ui/Field';
+import { Button } from './ui/Button';
 
 // Tokens for a network: prefer the rich `tokens[]`, fall back to `supportedTokens[]`.
 const tokensForNetwork = (network) => {
@@ -8,16 +10,6 @@ const tokensForNetwork = (network) => {
     return network.tokens.map((t) => t.symbol);
   }
   return network.supportedTokens ?? [];
-};
-
-const selectStyle = {
-  width: '100%',
-  padding: '10px',
-  fontSize: '14px',
-  border: '1px solid #ccc',
-  borderRadius: '6px',
-  backgroundColor: '#fff',
-  cursor: 'pointer',
 };
 
 /**
@@ -51,37 +43,24 @@ const NetworkTokenSelector = ({ value, onChange }) => {
   };
 
   if (loading) {
-    return <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>Loading networks…</p>;
+    return <p className="loading" style={{ padding: '0.5rem 0', textAlign: 'left' }}>Loading networks…</p>;
   }
 
   if (error) {
     return (
-      <div style={{ fontSize: '14px', color: '#721c24' }}>
-        <span>Couldn't load networks: {error}</span>{' '}
-        <button
-          onClick={refresh}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#00a26c',
-            textDecoration: 'underline',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
+      <p className="panel__sub" style={{ marginBottom: 0 }}>
+        Couldn&rsquo;t load networks: {error}{' '}
+        <Button variant="ghost" onClick={refresh}>
           Retry
-        </button>
-      </div>
+        </Button>
+      </p>
     );
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-      <div>
-        <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '13px' }}>
-          Network
-        </label>
-        <select value={networkId || ''} onChange={handleNetworkChange} style={selectStyle}>
+    <div className="selector-grid">
+      <Field label="Network">
+        <select value={networkId || ''} onChange={handleNetworkChange}>
           <option value="" disabled>
             Select network
           </option>
@@ -91,16 +70,12 @@ const NetworkTokenSelector = ({ value, onChange }) => {
             </option>
           ))}
         </select>
-      </div>
+      </Field>
 
-      <div>
-        <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '13px' }}>
-          Crypto token
-        </label>
+      <Field label="Crypto token">
         <select
           value={symbol || ''}
           onChange={handleTokenChange}
-          style={{ ...selectStyle, cursor: selectedNetwork ? 'pointer' : 'not-allowed' }}
           disabled={!selectedNetwork}
         >
           <option value="" disabled>
@@ -112,7 +87,7 @@ const NetworkTokenSelector = ({ value, onChange }) => {
             </option>
           ))}
         </select>
-      </div>
+      </Field>
     </div>
   );
 };
