@@ -100,20 +100,22 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
       setError(null);
       setIsLoading(true);
 
-      // Fetch saved wallet addresses
-      const addressesResponse = await fetch(`/api/wallet-addresses/${userId}`);
-      let walletAddresses = [];
-      if (addressesResponse.ok) {
-        walletAddresses = await addressesResponse.json();
-      }
-
-      // Network + token chosen on the cart page (if any)
-      let selection = {};
+      // Network + token combos chosen on the cart page (if any). The list key
+      // supersedes the legacy single-selection key; fall back for old data.
+      let selections = [];
       try {
-        selection = JSON.parse(localStorage.getItem('meshTransferSelection')) || {};
+        const stored = JSON.parse(localStorage.getItem('meshTransferSelections'));
+        if (Array.isArray(stored)) {
+          selections = stored;
+        } else {
+          const legacy = JSON.parse(localStorage.getItem('meshTransferSelection'));
+          if (legacy && legacy.networkId) selections = [legacy];
+        }
       } catch {
-        selection = {};
+        selections = [];
       }
+      // Only fully chosen combos count — a half-filled row is not "provided".
+      const providedSelections = selections.filter((s) => s && s.networkId && s.symbol);
 
       // Create payment link token
       const response = await fetch('/api/mesh/payment-link', {
@@ -127,12 +129,12 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
           transferType,
           env: meshEnv,
           linkVersion,
-          networkId: selection.networkId || undefined,
-          symbol: selection.symbol || undefined,
-          // Shopper-entered destination address (cart page) for networks with no
-          // configured receiving address; ignored by the backend when one exists.
-          address: selection.address || undefined,
-          toAddresses: walletAddresses.length > 0 ? walletAddresses : undefined,
+          // Each combo may carry a shopper-entered destination address (cart
+          // page) for networks with no configured receiving address; the
+          // backend ignores it when one is configured. Omitted when the
+          // shopper skipped the optional section — the backend then falls
+          // back to its default toAddresses entry.
+          selections: providedSelections.length > 0 ? providedSelections : undefined,
         }),
       });
 

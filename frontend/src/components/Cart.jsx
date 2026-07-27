@@ -1,45 +1,61 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
-import NetworkTokenSelector from './NetworkTokenSelector';
-import { useNetworkAddress } from '../hooks/useNetworkAddress';
+import TransferSelectionRow from './TransferSelectionRow';
+
+const EMPTY_SELECTION = { networkId: '', symbol: '', address: '' };
+
+// Load the persisted combo list; migrate the legacy single-selection key
+// (meshTransferSelection) into a one-entry list the first time.
+const loadSelections = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem('meshTransferSelections'));
+    if (Array.isArray(stored) && stored.length > 0) return stored;
+  } catch {
+    // fall through to the legacy key
+  }
+  try {
+    const legacy = JSON.parse(localStorage.getItem('meshTransferSelection'));
+    if (legacy && legacy.networkId) return [legacy];
+  } catch {
+    // fall through to the empty default
+  }
+  return [{ ...EMPTY_SELECTION }];
+};
 
 const Cart = () => {
   const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
 
-  // Network + token + (optional) destination address, persisted so other flows
-  // (e.g. checkout / the Mesh widget) can read it.
-  const [transferSelection, setTransferSelection] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('meshTransferSelection')) || { networkId: '', symbol: '', address: '' };
-    } catch {
-      return { networkId: '', symbol: '', address: '' };
-    }
-  });
+  // Network + token + (optional) destination address combos, persisted so
+  // other flows (e.g. checkout / the Mesh widget) can read them. The whole
+  // section is optional — combos the shopper provides become the link token's
+  // transferOptions.toAddresses; none provided means the backend default.
+  const [transferSelections, setTransferSelections] = useState(loadSelections);
 
-  // Whether the backend already has a receiving address for this network/token.
-  const { configured, loading: addressLoading } = useNetworkAddress(
-    transferSelection.networkId,
-    transferSelection.symbol
-  );
-  // Prompt for an address only once we know none is configured for the selection.
-  const needsAddress = !!transferSelection.networkId && !addressLoading && !configured;
-
-  const persistSelection = (selection) => {
-    setTransferSelection(selection);
-    localStorage.setItem('meshTransferSelection', JSON.stringify(selection));
+  const persistSelections = (selections) => {
+    setTransferSelections(selections);
+    localStorage.setItem('meshTransferSelections', JSON.stringify(selections));
+    // The single-selection key is superseded by the list; drop it so a stale
+    // value can't resurface after the migration in loadSelections.
+    localStorage.removeItem('meshTransferSelection');
   };
 
-  // Network/token changed — clear any previously entered address so it can't
-  // leak across networks (a stale address would be invalid on the new chain).
-  const handleSelectionChange = ({ networkId, symbol }) => {
-    persistSelection({ networkId, symbol, address: '' });
+  const handleSelectionChange = (index, selection) => {
+    persistSelections(
+      transferSelections.map((s, i) => (i === index ? selection : s))
+    );
   };
 
-  const handleAddressChange = (e) => {
-    persistSelection({ ...transferSelection, address: e.target.value });
+  const handleAddSelection = () => {
+    persistSelections([...transferSelections, { ...EMPTY_SELECTION }]);
   };
+
+  const handleRemoveSelection = (index) => {
+    persistSelections(transferSelections.filter((_, i) => i !== index));
+  };
+
+  const additionalSelections = transferSelections.slice(1);
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -159,42 +175,61 @@ const Cart = () => {
           borderRadius: '8px',
         }}
       >
-        <h3 style={{ marginTop: 0, marginBottom: '5px', fontSize: '16px' }}>Payment network &amp; token</h3>
+        <h3 style={{ marginTop: 0, marginBottom: '5px', fontSize: '16px' }}>
+          Payment network &amp; token <span style={{ fontWeight: 'normal', color: '#666' }}>(optional)</span>
+        </h3>
         <p style={{ fontSize: '13px', color: '#666', marginTop: 0, marginBottom: '15px' }}>
-          Choose the network and crypto token you'll use to pay at checkout.
+          Optionally choose the network(s) and crypto token(s) you'll use to pay at checkout.
+          If you skip this, a default is used.
         </p>
-        <NetworkTokenSelector value={transferSelection} onChange={handleSelectionChange} />
+        <TransferSelectionRow
+          value={transferSelections[0]}
+          onChange={(selection) => handleSelectionChange(0, selection)}
+        />
 
-        {/* Shown only when the selected network/token has no merchant address
-            configured on the backend — the shopper must supply a destination
-            address that's valid for the chosen chain. */}
-        {needsAddress && (
-          <div style={{ marginTop: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '13px' }}>
-              Destination address
-            </label>
-            <input
-              type="text"
-              value={transferSelection.address || ''}
-              onChange={handleAddressChange}
-              placeholder="Enter the receiving address for this network"
-              style={{
-                width: '100%',
-                padding: '10px',
-                fontSize: '14px',
-                border: '1px solid #ccc',
-                borderRadius: '6px',
-                fontFamily: 'monospace',
-                boxSizing: 'border-box',
-              }}
-            />
-            <p style={{ fontSize: '12px', color: '#856404', marginTop: '6px', marginBottom: 0 }}>
-              No receiving address is configured for this network, so the payment will be sent to the
-              address you enter here. Make sure it's valid for the selected network.
-            </p>
-          </div>
-        )}
+        <button
+          onClick={handleAddSelection}
+          className="btn btn-secondary"
+          style={{ marginTop: '15px' }}
+        >
+          + Add another network &amp; token
+        </button>
       </div>
+
+      {/* Every combo added beyond the first shows up here, below the payment
+          network & token section, each removable on its own. */}
+      {additionalSelections.length > 0 && (
+        <div
+          style={{
+            marginTop: '20px',
+            padding: '20px',
+            border: '1px solid #ddd',
+            backgroundColor: '#fff',
+            borderRadius: '8px',
+          }}
+        >
+          <h3 style={{ marginTop: 0, marginBottom: '5px', fontSize: '16px' }}>
+            Additional networks &amp; tokens
+          </h3>
+          <p style={{ fontSize: '13px', color: '#666', marginTop: 0, marginBottom: '15px' }}>
+            These are offered alongside the selection above as ways to pay at checkout.
+          </p>
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {additionalSelections.map((selection, i) => (
+              <div
+                key={i + 1}
+                style={{ borderTop: i > 0 ? '1px solid #eee' : 'none', paddingTop: i > 0 ? '20px' : 0 }}
+              >
+                <TransferSelectionRow
+                  value={selection}
+                  onChange={(next) => handleSelectionChange(i + 1, next)}
+                  onRemove={() => handleRemoveSelection(i + 1)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div
         style={{
