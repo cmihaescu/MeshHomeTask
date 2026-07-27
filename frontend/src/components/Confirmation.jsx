@@ -1,42 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Portfolio from './Portfolio';
+import { ButtonLink } from './ui/Button';
 
 const Confirmation = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId');
   const [userId] = useState(() => localStorage.getItem('userId'));
+
   return (
     <div className="container">
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <div style={{ fontSize: '64px', color: '#28a745', marginBottom: '10px' }}>✓</div>
-        <h2 style={{ color: '#28a745', marginBottom: '10px' }}>Payment Successful!</h2>
-        {orderId && (
-          <p style={{ fontSize: '14px', color: '#666' }}>
-            Order ID: <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{orderId}</span>
-          </p>
-        )}
-        <p style={{ fontSize: '16px', color: '#666' }}>
-          Thank you for your purchase. Your payment has been processed successfully.
-        </p>
+      <div className="confirm-head">
+        <div className="confirm-head__badge" aria-hidden="true">
+          ✓
+        </div>
+        <h1>Payment successful</h1>
+        {orderId ? (
+          <p className="order-id">order {orderId}</p>
+        ) : null}
+        <p>Thank you for your purchase. Your payment has been processed.</p>
       </div>
 
       <Portfolio userId={userId} />
 
-      <div style={{ marginTop: '40px', textAlign: 'center', display: 'flex', gap: '15px', justifyContent: 'center' }}>
-        <button
-          onClick={() => navigate('/')}
-          className="btn btn-primary"
-        >
-          Continue Shopping
-        </button>
-        <button
-          onClick={() => navigate('/account')}
-          className="btn btn-secondary"
-        >
-          Manage Wallets
-        </button>
+      <div className="confirm-actions">
+        <ButtonLink to="/">Continue shopping</ButtonLink>
+        <ButtonLink to="/account" variant="secondary">
+          Manage account
+        </ButtonLink>
       </div>
     </div>
   );
