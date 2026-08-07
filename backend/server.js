@@ -163,7 +163,7 @@ app.get('/api/orders', (req, res) => {
 // Mesh Connect: Generate Payment Link Token
 app.post('/api/mesh/payment-link', async (req, res) => {
   try {
-    const { userId, amount, toAddresses, transferType, env, linkVersion, networkId, symbol, address } = req.body;
+    const { userId, amount, transferType, env, linkVersion, selections, networkId, symbol, address } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Valid amount is required' });
@@ -181,41 +181,40 @@ app.post('/api/mesh/payment-link', async (req, res) => {
       });
     }
 
-    // Prepare toAddresses - if provided use those, otherwise use default
-    // const addresses = toAddresses && toAddresses.length > 0
-    //   ? toAddresses.map(addr => ({
-    //       networkId: addr.networkId,
-    //       symbol: addr.symbol,
-    //       address: addr.address,
-    //       amount: amount // Set the checkout total as the amount
-    //     }))
-    //   : [{
-    //       networkId: "e3c7fdd8-b1fc-4e51-85ae-bb276e075611",
-    //       symbol: "USDC",
-    //       address: "0x910aeb59ba75c8226a84e3c1b0db3b55a4ec2a40",
-    //       amount: amount
-    //     }];
+    const DEFAULT_NETWORK_ID = "aa883b03-120d-477c-a588-37c2afd3ca71"; // Base
+    const DEFAULT_SYMBOL = "USDC";
+    const DEFAULT_EVM_ADDRESS = "0x6A36e7e3682Ff903a0680Da2F8C5f2a34A3d3266";
 
-    // Network + token come from the user's selection (cart page); fall back to
-    // the EVM/USDC defaults when not provided (e.g. the deposit widget).
-    const resolvedNetworkId = networkId || "aa883b03-120d-477c-a588-37c2afd3ca71";
-    const resolvedSymbol = symbol || "USDC";
-    // Destination address resolution order:
+    // Destination address resolution order (per combo):
     //   1. The per-network map in networkAddresses.js (valid for that chain)
     //   2. An address supplied in the request (shopper-provided at checkout when
     //      the selected network has no configured address)
     //   3. The default EVM receiving address (legacy fallback)
-    const resolvedAddress =
-      resolveToAddress(resolvedNetworkId, resolvedSymbol) ||
-      address ||
-      "0x6A36e7e3682Ff903a0680Da2F8C5f2a34A3d3266";
+    const toAddressEntry = (combo) => ({
+      networkId: combo.networkId,
+      symbol: combo.symbol,
+      address:
+        resolveToAddress(combo.networkId, combo.symbol) ||
+        combo.address ||
+        DEFAULT_EVM_ADDRESS,
+    });
 
-    const addresses = [{
-          networkId: resolvedNetworkId,
-          symbol: resolvedSymbol,
-          address: resolvedAddress,
-          ...(transferType === "payment" && { amount })
-        }];
+    // The cart's network & token section is optional and multi-entry: every
+    // provided combo becomes a toAddresses entry (alternative ways to pay).
+    // No combos (and no legacy single selection) -> the EVM/USDC default.
+    const providedSelections = Array.isArray(selections)
+      ? selections.filter((s) => s && s.networkId && s.symbol)
+      : [];
+
+    let addresses;
+    if (providedSelections.length > 0) {
+      addresses = providedSelections.map(toAddressEntry);
+    } else if (networkId) {
+      // Legacy single-selection request shape (pre multi-combo clients).
+      addresses = [toAddressEntry({ networkId, symbol: symbol || DEFAULT_SYMBOL, address })];
+    } else {
+      addresses = [toAddressEntry({ networkId: DEFAULT_NETWORK_ID, symbol: DEFAULT_SYMBOL })];
+    }
 
     const requestBody = {
       userId: userId,
@@ -224,7 +223,10 @@ app.post('/api/mesh/payment-link', async (req, res) => {
         transferType:"deposit",
         toAddresses: addresses,
         isInclusiveFeeEnabled: false,
-        ...(transferType === "deposit" && { AmountInFiat:amount })
+        // The full amount rides on transferOptions.amountInFiat (cart total for
+        // payments, entered amount for deposits) — never on individual
+        // toAddresses items.
+        amountInFiat: amount
       }
     };
  console.log(`Link Created (${meshConfig.env}): `, JSON.stringify(requestBody))

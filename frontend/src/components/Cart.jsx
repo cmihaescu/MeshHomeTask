@@ -1,48 +1,63 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
-import NetworkTokenSelector from './NetworkTokenSelector';
-import { useNetworkAddress } from '../hooks/useNetworkAddress';
+import TransferSelectionRow from './TransferSelectionRow';
 import { Button, ButtonLink } from './ui/Button';
-import { Field } from './ui/Field';
 import { Receipt } from './ui/Receipt';
+
+const EMPTY_SELECTION = { networkId: '', symbol: '', address: '' };
+
+// Load the persisted combo list; migrate the legacy single-selection key
+// (meshTransferSelection) into a one-entry list the first time.
+const loadSelections = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem('meshTransferSelections'));
+    if (Array.isArray(stored) && stored.length > 0) return stored;
+  } catch {
+    // fall through to the legacy key
+  }
+  try {
+    const legacy = JSON.parse(localStorage.getItem('meshTransferSelection'));
+    if (legacy && legacy.networkId) return [legacy];
+  } catch {
+    // fall through to the empty default
+  }
+  return [{ ...EMPTY_SELECTION }];
+};
 
 const Cart = () => {
   const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
 
-  // Network + token + (optional) destination address, persisted so other flows
-  // (e.g. checkout / the Mesh widget) can read it.
-  const [transferSelection, setTransferSelection] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('meshTransferSelection')) || { networkId: '', symbol: '', address: '' };
-    } catch {
-      return { networkId: '', symbol: '', address: '' };
-    }
-  });
+  // Network + token + (optional) destination address combos, persisted so
+  // other flows (e.g. checkout / the Mesh widget) can read them. The whole
+  // section is optional — combos the shopper provides become the link token's
+  // transferOptions.toAddresses; none provided means the backend default.
+  const [transferSelections, setTransferSelections] = useState(loadSelections);
 
-  // Whether the backend already has a receiving address for this network/token.
-  const { configured, loading: addressLoading } = useNetworkAddress(
-    transferSelection.networkId,
-    transferSelection.symbol
-  );
-  // Prompt for an address only once we know none is configured for the selection.
-  const needsAddress = !!transferSelection.networkId && !addressLoading && !configured;
-
-  const persistSelection = (selection) => {
-    setTransferSelection(selection);
-    localStorage.setItem('meshTransferSelection', JSON.stringify(selection));
+  const persistSelections = (selections) => {
+    setTransferSelections(selections);
+    localStorage.setItem('meshTransferSelections', JSON.stringify(selections));
+    // The single-selection key is superseded by the list; drop it so a stale
+    // value can't resurface after the migration in loadSelections.
+    localStorage.removeItem('meshTransferSelection');
   };
 
-  // Network/token changed — clear any previously entered address so it can't
-  // leak across networks (a stale address would be invalid on the new chain).
-  const handleSelectionChange = ({ networkId, symbol }) => {
-    persistSelection({ networkId, symbol, address: '' });
+  const handleSelectionChange = (index, selection) => {
+    persistSelections(
+      transferSelections.map((s, i) => (i === index ? selection : s))
+    );
   };
 
-  const handleAddressChange = (e) => {
-    persistSelection({ ...transferSelection, address: e.target.value });
+  const handleAddSelection = () => {
+    persistSelections([...transferSelections, { ...EMPTY_SELECTION }]);
   };
+
+  const handleRemoveSelection = (index) => {
+    persistSelections(transferSelections.filter((_, i) => i !== index));
+  };
+
+  const additionalSelections = transferSelections.slice(1);
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -122,35 +137,45 @@ const Cart = () => {
 
       {/* Transfer network + token selection (populated from the cached Mesh networks list) */}
       <section className="panel" aria-label="Payment network and token">
-        <h2 className="panel__title">Payment network &amp; token</h2>
+        <h2 className="panel__title">
+          Payment network &amp; token <span style={{ fontWeight: 'normal', opacity: 0.7 }}>(optional)</span>
+        </h2>
         <p className="panel__sub">
-          Choose the network and crypto token you&rsquo;ll use to pay at checkout.
+          Optionally choose the network(s) and crypto token(s) you&rsquo;ll use to pay at checkout.
+          If you skip this, a default is used.
         </p>
-        <NetworkTokenSelector value={transferSelection} onChange={handleSelectionChange} />
+        <TransferSelectionRow
+          value={transferSelections[0]}
+          onChange={(selection) => handleSelectionChange(0, selection)}
+        />
 
-        {/* Shown only when the selected network/token has no merchant address
-            configured on the backend — the shopper must supply a destination
-            address that's valid for the chosen chain. */}
-        {needsAddress ? (
-          <div style={{ marginTop: '1rem' }}>
-            <Field
-              label="Destination address"
-              hint="No receiving address is configured for this network, so the payment will be sent to the address you enter here. Make sure it's valid for the selected network."
-            >
-              <input
-                type="text"
-                name="destination-address"
-                autoComplete="off"
-                spellCheck={false}
-                className="input--mono"
-                value={transferSelection.address || ''}
-                onChange={handleAddressChange}
-                placeholder="e.g. 0x6A36…3266"
-              />
-            </Field>
-          </div>
-        ) : null}
+        <div style={{ marginTop: '1rem' }}>
+          <Button variant="secondary" onClick={handleAddSelection}>
+            + Add another network &amp; token
+          </Button>
+        </div>
       </section>
+
+      {/* Every combo added beyond the first shows up here, below the payment
+          network & token section, each removable on its own. */}
+      {additionalSelections.length > 0 ? (
+        <section className="panel" aria-label="Additional networks and tokens">
+          <h2 className="panel__title">Additional networks &amp; tokens</h2>
+          <p className="panel__sub">
+            These are offered alongside the selection above as ways to pay at checkout.
+          </p>
+          <div style={{ display: 'grid', gap: '1.25rem' }}>
+            {additionalSelections.map((selection, i) => (
+              <TransferSelectionRow
+                key={i + 1}
+                value={selection}
+                onChange={(next) => handleSelectionChange(i + 1, next)}
+                onRemove={() => handleRemoveSelection(i + 1)}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <Receipt title="Cart summary">
         {cartItems.map((item) => (
