@@ -3,12 +3,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useMeshEnv } from '../contexts/MeshEnvContext';
 import { useNavigate } from 'react-router-dom';
+import ConnectedPayloadPanel, { CONNECTED_PAYLOAD_KEY } from './ConnectedPayloadPanel';
 
 
 
 const MeshSDK = ({ userId, orderComplete, transferType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [meshLinkSDK, setMeshLinkSDK] = useState(null);
+  const [connectedPayload, setConnectedPayload] = useState(null);
   const { cartItems, getCartTotal, clearCart } = useCart();
   const { meshEnv, linkVersion, meshClientId, iframeMode, blockTopLevelLinks } = useMeshEnv();
   const navigate = useNavigate();
@@ -54,6 +56,11 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
       },
       onIntegrationConnected: (payload) => {
         console.log("Connected!", payload);
+        // Surface the payload in the UI (mobile has no console) before any
+        // token extraction, so it shows even if the payload shape differs.
+        // Persisted so it survives the navigate('/confirmation') on success.
+        setConnectedPayload(payload);
+        sessionStorage.setItem(CONNECTED_PAYLOAD_KEY, JSON.stringify(payload));
         const { accessToken } = payload.accessToken.accountTokens[0]
         const { refreshToken } = payload.accessToken.accountTokens[0]
         // Store Mesh tokens if present
@@ -99,6 +106,9 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
     try {
       setError(null);
       setIsLoading(true);
+      // Fresh flow — drop the payload from any previous connection
+      setConnectedPayload(null);
+      sessionStorage.removeItem(CONNECTED_PAYLOAD_KEY);
 
       // Fetch saved wallet addresses
       const addressesResponse = await fetch(`/api/wallet-addresses/${userId}`);
@@ -281,6 +291,9 @@ const MeshSDK = ({ userId, orderComplete, transferType }) => {
           <strong>Error:</strong> {error}
         </div>
       )}
+
+      <ConnectedPayloadPanel payload={connectedPayload} />
+
 
       {/* When iframe mode is on, the Mesh Link UI is mounted into this element
           (passed to openLink as customIframeId) instead of a popup overlay. */}
