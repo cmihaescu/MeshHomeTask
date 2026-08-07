@@ -1,12 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Portfolio from './Portfolio';
+import ConnectedPayloadPanel, { CONNECTED_PAYLOAD_KEY } from './ConnectedPayloadPanel';
 
 const Confirmation = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId');
   const [userId] = useState(() => localStorage.getItem('userId'));
+  // onIntegrationConnected payload stashed by MeshSDK before it navigated here
+  const [connectedPayload] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(CONNECTED_PAYLOAD_KEY));
+    } catch {
+      return null;
+    }
+  });
   return (
     <div className="container">
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
@@ -23,6 +32,8 @@ const Confirmation = () => {
       </div>
 
       <Portfolio userId={userId} />
+
+      <ConnectedPayloadPanel payload={connectedPayload} />
 
       <div style={{ marginTop: '40px', textAlign: 'center', display: 'flex', gap: '15px', justifyContent: 'center' }}>
         <button
