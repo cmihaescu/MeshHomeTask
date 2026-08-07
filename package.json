@@ -1,0 +1,15 @@
+{
+  "name": "mesh-home-task",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root manifest so Vercel installs the backend deps needed by the api/ serverless function.",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "uuid": "^9.0.1"
+  }
+}

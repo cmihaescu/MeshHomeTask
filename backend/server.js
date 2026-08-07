@@ -498,17 +498,24 @@ if (fs.existsSync(frontendDist)) {
   app.get('*', (req, res) => res.sendFile(path.join(frontendDist, 'index.html')));
 }
 
-// Start server
-app.listen(PORT, () => {
-  const configured = (cfg) => !!(cfg.clientId && cfg.clientSecret && cfg.apiUrl);
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Default Mesh environment: ${DEFAULT_MESH_ENV}`);
-  console.log(`Default Link version: ${DEFAULT_LINK_VERSION}`);
-  for (const version of ['v1', 'v2']) {
-    console.log(`Mesh sandbox configured (Link ${version}): ${configured(resolveMeshConfig('sandbox', version))}`);
-    console.log(`Mesh production configured (Link ${version}): ${configured(resolveMeshConfig('production', version))}`);
-  }
-  console.log(`\nTo receive webhooks from Mesh Connect, expose this server with ngrok:`);
-  console.log(`  ngrok http ${PORT}`);
-  console.log(`Then register the ngrok URL as: https://<your-id>.ngrok-free.app/webhook`);
-});
+// Start server only when run directly (local dev / traditional hosting like
+// Render). On Vercel this module is imported by api/index.js and invoked
+// per-request as a serverless function, so it must NOT open a listener.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    const configured = (cfg) => !!(cfg.clientId && cfg.clientSecret && cfg.apiUrl);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Default Mesh environment: ${DEFAULT_MESH_ENV}`);
+    console.log(`Default Link version: ${DEFAULT_LINK_VERSION}`);
+    for (const version of ['v1', 'v2']) {
+      console.log(`Mesh sandbox configured (Link ${version}): ${configured(resolveMeshConfig('sandbox', version))}`);
+      console.log(`Mesh production configured (Link ${version}): ${configured(resolveMeshConfig('production', version))}`);
+    }
+    console.log(`\nTo receive webhooks from Mesh Connect, expose this server with ngrok:`);
+    console.log(`  ngrok http ${PORT}`);
+    console.log(`Then register the ngrok URL as: https://<your-id>.ngrok-free.app/webhook`);
+  });
+}
+
+// Export the Express app so serverless platforms (Vercel) can wrap it.
+module.exports = app;
