@@ -264,6 +264,115 @@ app.post('/api/mesh/payment-link', async (req, res) => {
 });
 
 // Mesh Connect: Get Portfolio by User ID
+// Mesh Connect: Generate a verification-only Link Token (withdrawal flow).
+// The user connects a self-hosted wallet and signs `message`; the frontend
+// receives the result as the `walletMessageSigned` SDK event. No transfer
+// options are sent, so no funds can move in this session.
+app.post('/api/mesh/verify-link', async (req, res) => {
+  try {
+    const { userId, env, linkVersion, networkId, message } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'No userId' });
+    }
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'A message to sign is required' });
+    }
+
+    const meshConfig = resolveMeshConfig(env, linkVersion);
+    if (!meshConfig.clientId || !meshConfig.clientSecret) {
+      return res.status(500).json({
+        error: `Mesh Connect not configured for ${meshConfig.env} / Link ${meshConfig.linkVersion}. Please set the MESH_CLIENT_ID and client secret/API URL environment variables for this account.`
+      });
+    }
+
+    const requestBody = {
+      userId,
+      restrictMultipleAccounts: true,
+      verifyWalletOptions: {
+        verificationMethods: ['signedMessage'],
+        message,
+        ...(networkId && { networkId }),
+      },
+    };
+    console.log(`Verify Link Created (${meshConfig.env}): `, JSON.stringify(requestBody));
+
+    const response = await fetch(`${meshConfig.apiUrl}/api/v1/linktoken`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': meshConfig.clientId,
+        'X-Client-Secret': meshConfig.clientSecret
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Mesh API error (verify link):', data);
+      return res.status(response.status).json({
+        error: 'Failed to create verify link',
+        details: data.message || data.error
+      });
+    }
+
+    res.json({
+      linkToken: data.content?.linkToken,
+      status: data.status,
+      message: data.message
+    });
+  } catch (error) {
+    console.error('Error creating verify link:', error);
+    res.status(500).json({
+      error: 'Failed to create verify link',
+      details: error.message
+    });
+  }
+});
+
+// Mesh Connect: wallet/network pairs that support verification. Used to
+// limit the network picker to networks at least one wallet can verify on.
+// The answer is the same for every user, so it is cached briefly per env.
+const verifyIntegrationsCache = {};
+const VERIFY_INTEGRATIONS_TTL_MS = 5 * 60 * 1000;
+
+app.get('/api/mesh/verify-integrations', async (req, res) => {
+  try {
+    const meshConfig = resolveMeshConfig(req.query.env, req.query.linkVersion);
+    if (!meshConfig.clientId || !meshConfig.clientSecret) {
+      return res.status(500).json({ error: `Mesh Connect not configured for ${meshConfig.env} / Link ${meshConfig.linkVersion}.` });
+    }
+
+    const cacheKey = `${meshConfig.env}:${meshConfig.linkVersion}`;
+    const cached = verifyIntegrationsCache[cacheKey];
+    if (cached && Date.now() - cached.at < VERIFY_INTEGRATIONS_TTL_MS) {
+      return res.json(cached.data);
+    }
+
+    const response = await fetch(`${meshConfig.apiUrl}/api/v1/wallets/verify/integrations`, {
+      method: 'GET',
+      headers: {
+        'X-Client-Id': meshConfig.clientId,
+        'X-Client-Secret': meshConfig.clientSecret
+      }
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Mesh API error (verify integrations):', data);
+      return res.status(response.status).json({
+        error: 'Failed to fetch verify integrations',
+        details: data.message || data.error
+      });
+    }
+
+    verifyIntegrationsCache[cacheKey] = { at: Date.now(), data };
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching verify integrations:', error);
+    res.status(500).json({ error: 'Failed to fetch verify integrations', details: error.message });
+  }
+});
+
 app.get('/api/v1/holdings/portfolio/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
