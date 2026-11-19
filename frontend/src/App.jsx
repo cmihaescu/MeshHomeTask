@@ -8,6 +8,7 @@ import Cart from './components/Cart';
 import Checkout from './components/Checkout';
 import Account from './components/Account';
 import Confirmation from './components/Confirmation';
+import Withdraw from './components/withdraw/Withdraw';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/account" element={<Account />} />
           <Route path="/confirmation" element={<Confirmation />} />
+          <Route path="/withdraw" element={<Withdraw />} />
         </Routes>
       </CartProvider>
       </MeshEnvProvider>

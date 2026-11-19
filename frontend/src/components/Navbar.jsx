@@ -100,6 +100,7 @@ const Navbar = () => {
           </label>
         )}
         <Link to="/">Shop</Link>
+        <Link to="/withdraw">Withdraw</Link>
         <Link to="/account">Account</Link>
         <Link to="/cart" style={{ position: 'relative' }}>
           Cart
