@@ -29,6 +29,9 @@ const Navbar = () => {
           <NavLink to="/" className="site-nav__link" end>
             Shop
           </NavLink>
+          <NavLink to="/withdraw" className="site-nav__link">
+            Withdraw
+          </NavLink>
           <NavLink to="/account" className="site-nav__link">
             Account
           </NavLink>

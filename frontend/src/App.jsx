@@ -14,6 +14,7 @@ import Cart from './components/Cart';
 const Checkout = lazy(() => import('./components/Checkout'));
 const Account = lazy(() => import('./components/Account'));
 const Confirmation = lazy(() => import('./components/Confirmation'));
+const Withdraw = lazy(() => import('./components/withdraw/Withdraw'));
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/account" element={<Account />} />
                   <Route path="/confirmation" element={<Confirmation />} />
+                  <Route path="/withdraw" element={<Withdraw />} />
                 </Routes>
               </Suspense>
             </main>
